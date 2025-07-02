@@ -177,8 +177,10 @@
                     <materialDesign:Card Grid.Column="0" Margin="5" Padding="0" UniformCornerRadius="4" VerticalAlignment="Stretch">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top" Text="Workspace" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="8,8,8,4"/>
-                            <ListBox ItemsSource="{Binding PackState.WorkspaceFiles}" 
-                                     SelectedItem="{Binding PackState.ActiveDocumentPath, Mode=TwoWay}" 
+                            <ListBox x:Name="WorkspaceFilesListBox"
+                                     ItemsSource="{Binding PackState.WorkspaceFiles}" 
+                                     SelectedItem="{Binding PackState.ActiveDocumentPath, Mode=OneWay}" 
+                                     SelectionChanged="WorkspaceFilesListBox_SelectionChanged"
                                      Style="{StaticResource MaterialDesignNavigationPrimaryListBox}" 
                                      HorizontalContentAlignment="Stretch">
                                 <ListBox.ItemTemplate>

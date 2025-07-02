@@ -47,19 +47,9 @@ public partial class PackStateService : ObservableObject, IPackStateService
         get => _activeDocumentPath;
         set
         {
-            if (EqualityComparer<string>.Default.Equals(_activeDocumentPath, value))
-            {
-                return;
-            }
-
-            if (_workspacePack?.HasUnsavedChangesFor(_activeDocumentPath) ?? false)
-            {
-                _ = PromptAndSwitchAsync(value);
-            }
-            else
-            {
-                SetAndLoadDocument(value);
-            }
+            // The logic has been moved out. This setter is now only called 
+            // after the user has confirmed the change.
+            SetAndLoadDocument(value);
         }
     }
 
@@ -454,6 +444,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     private void SetAndLoadDocument(string? newPath)
     {
+        // This 'if' check is important to prevent re-entrancy and unnecessary work.
         if (SetProperty(ref _activeDocumentPath, newPath, nameof(ActiveDocumentPath)))
         {
             _logger.LogInformation("Activating document: {DocumentPath}", newPath);

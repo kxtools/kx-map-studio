@@ -90,5 +90,50 @@ namespace KXMapStudio.App.Views
                 }
             }
         }
+
+        private async void WorkspaceFilesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // We only care about user-initiated selections.
+            if (e.AddedItems.Count == 0)
+            {
+                return;
+            }
+
+            if (DataContext is not MainViewModel vm)
+            {
+                return;
+            }
+
+            var listBox = (ListBox)sender;
+            var newPath = (string)e.AddedItems[0]!;
+
+            // Get the source of truth for the current path from the ViewModel,
+            // as the binding is now OneWay.
+            var currentPath = vm.PackState.ActiveDocumentPath;
+
+            // If the user simply re-clicked the already active item, do nothing.
+            if (Equals(currentPath, newPath))
+            {
+                return;
+            }
+
+            // Ask the ViewModel for permission to change the document.
+            bool canProceed = await vm.RequestChangeDocumentAsync();
+
+            if (canProceed)
+            {
+                // Permission granted. Officially update the ViewModel's state.
+                vm.PackState.ActiveDocumentPath = newPath;
+            }
+            else
+            {
+                // Permission denied (user clicked "Cancel").
+                // Revert the ListBox's visual selection back to the original item.
+                // To prevent this from re-triggering this event handler, we unhook it.
+                listBox.SelectionChanged -= WorkspaceFilesListBox_SelectionChanged;
+                listBox.SelectedItem = currentPath; // Revert to the old path from the ViewModel.
+                listBox.SelectionChanged += WorkspaceFilesListBox_SelectionChanged;
+            }
+        }
     }
 }

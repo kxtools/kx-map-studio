@@ -167,6 +167,12 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    public Task<bool> RequestChangeDocumentAsync()
+    {
+        // Delegate the check to the state service.
+        return PackState.CheckAndPromptToSaveChanges();
+    }
+
     private void OnPackStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
