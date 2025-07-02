@@ -185,28 +185,68 @@ public partial class PackStateService : ObservableObject, IPackStateService
         var newFilePath = dialog.FileName;
         var newFileName = Path.GetFileName(newFilePath);
 
-        XDocument currentDoc = _workspacePack.XmlDocuments[ActiveDocumentPath];
-        List<Marker> currentMarkers = new(ActiveDocumentMarkers);
+        // 1. Gather all data for the new file from the current view.
+        var markersToSave = new List<Marker>(ActiveDocumentMarkers);
+        _workspacePack.UnmanagedPois.TryGetValue(ActiveDocumentPath, out var unmanagedElements);
 
-        await WriteActiveDocumentToPath(newFilePath, ActiveDocumentPath, isSaveAs: true);
+        // 2. Create a new, clean XDocument in memory.
+        var newDoc = new XDocument(
+            new XDeclaration("1.0", "utf-8", null),
+            new XElement(TacoXmlConstants.OverlayDataElement)
+        );
+        _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
 
-        _workspacePack.XmlDocuments.Remove(ActiveDocumentPath);
-        _workspacePack.MarkersByFile.Remove(ActiveDocumentPath);
-        _workspacePack.OriginalRawContent.Remove(ActiveDocumentPath);
-
-        _workspacePack.XmlDocuments[newFileName] = currentDoc;
-        _workspacePack.MarkersByFile[newFileName] = currentMarkers;
-        foreach (var marker in currentMarkers)
+        // 3. Save the new document to the disk.
+        try
         {
-            marker.SourceFile = newFileName;
+            await using (var writer = File.CreateText(newFilePath))
+            {
+                await newDoc.SaveAsync(writer, SaveOptions.None, CancellationToken.None);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save file during Save As to {Path}", newFilePath);
+            _dialogService.ShowError("Save As Failed", $"An error occurred while saving the file:\n\n{ex.Message}");
+            return; // Stop if the physical save fails.
         }
 
-        _workspacePack.FilePath = newFilePath;
-        SetWorkspaceState(newFilePath, _workspacePack);
+        // 4. Create a brand new, clean workspace state based on the newly saved file.
+        byte[] newRawContent;
+        await using (var ms = new MemoryStream())
+        {
+            await newDoc.SaveAsync(ms, SaveOptions.DisableFormatting, CancellationToken.None);
+            newRawContent = ms.ToArray();
+        }
 
-        WorkspaceFiles.Clear();
-        WorkspaceFiles.Add(newFileName);
-        ActiveDocumentPath = newFileName;
+        foreach (var marker in markersToSave)
+        {
+            marker.SourceFile = newFileName;
+            marker.IsDirty = false;
+        }
+
+        var newLoadedPack = new LoadedMarkerPack
+        {
+            FilePath = newFilePath,
+            IsArchive = false, // The new workspace is a single file, not an archive.
+            RootCategory = new Category { InternalName = "root", DisplayName = Path.GetFileNameWithoutExtension(newFileName) },
+            XmlDocuments = new Dictionary<string, XDocument> { { newFileName, newDoc } },
+            MarkersByFile = new Dictionary<string, List<Marker>> { { newFileName, markersToSave } },
+            OriginalRawContent = new Dictionary<string, byte[]> { { newFileName, newRawContent } }
+        };
+
+        if (unmanagedElements != null && unmanagedElements.Any())
+        {
+            newLoadedPack.UnmanagedPois[newFileName] = unmanagedElements;
+        }
+
+        // 5. Tear down the old workspace state and initialize the new one.
+        CloseWorkspaceInternal();
+        SetWorkspaceState(newFilePath, newLoadedPack);
+        WorkspaceFiles = new ObservableCollection<string> { newFileName };
+        ActiveDocumentPath = newFileName; // This will trigger a UI refresh via its property handler.
+
+        _logger.LogInformation("File saved as '{newFilePath}' and workspace context has been reset to a single-file mode.", newFilePath);
     }
 
     public Task NewFileAsync()
