@@ -25,6 +25,7 @@ public interface IPackStateService : INotifyPropertyChanged
     bool IsLoading { get; }
     bool HasUnsavedChanges { get; }
 
+    Task<bool> CheckAndPromptToSaveChanges();
     Task OpenWorkspaceAsync(string path);
     void CloseWorkspace();
     Task SaveActiveDocumentAsync();

@@ -21,33 +21,27 @@ namespace KXMapStudio.App.Views
             MainSnackbar.MessageQueue = snackbarMessageQueue;
         }
 
-        private void MainView_Closing(object? sender, CancelEventArgs e)
+        private async void MainView_Closing(object? sender, CancelEventArgs e)
         {
             if (DataContext is not MainViewModel vm)
             {
                 return;
             }
 
+            // We must set e.Cancel = true *before* the async call.
+            // If the user needs to save, the window will try to close before the save dialog appears.
+            // We'll un-cancel it if the operation is allowed to proceed.
             if (vm.PackState.HasUnsavedChanges)
             {
-                var result = MessageBox.Show(
-                    "You have unsaved changes. Would you like to save before exiting?",
-                    "Exit Application",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Warning);
+                e.Cancel = true;
 
-                if (result == MessageBoxResult.Yes)
-                {
-                    vm.SaveDocumentCommand.Execute(null);
+                bool canProceed = await vm.PackState.CheckAndPromptToSaveChanges();
 
-                    if (vm.PackState.HasUnsavedChanges)
-                    {
-                        e.Cancel = true;
-                    }
-                }
-                else if (result == MessageBoxResult.Cancel)
+                if (canProceed)
                 {
-                    e.Cancel = true;
+                    // Un-cancel the closing event and close the application.
+                    e.Cancel = false;
+                    Application.Current.Shutdown();
                 }
             }
         }
