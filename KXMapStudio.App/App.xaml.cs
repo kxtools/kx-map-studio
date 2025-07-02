@@ -45,6 +45,7 @@ namespace KXMapStudio.App
 
                     services.AddSingleton<HistoryService>();
                     services.AddSingleton<GlobalHotkeyService>();
+                    services.AddSingleton<UpdateService>();
 
                     services.AddSingleton<IPackStateService, PackStateService>();
                 })
