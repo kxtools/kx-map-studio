@@ -1,17 +1,20 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.IO;
-using System.Windows;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
+using System.Windows;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+
 using KXMapStudio.App.Actions;
 using KXMapStudio.App.Services;
 using KXMapStudio.App.State;
 using KXMapStudio.App.Utilities;
 using KXMapStudio.App.ViewModels.PropertyEditor;
 using KXMapStudio.Core;
+
 using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 
@@ -103,7 +106,7 @@ public partial class MainViewModel : ObservableObject
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
         _closeWorkspaceCommand = new RelayCommand(CloseWorkspace, () => PackState.IsWorkspaceLoaded);
-        _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges);
+        _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges && !PackState.IsWorkspaceArchive);
         _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null);
         _deleteSelectedMarkersCommand = new RelayCommand(DeleteSelectedMarkers, () => PackState.SelectedMarkers.Any());
         _copySelectedMarkerGuidCommand = new RelayCommand(CopySelectedMarkerGuid, () => PackState.SelectedMarkers.Count == 1);
@@ -129,10 +132,27 @@ public partial class MainViewModel : ObservableObject
         _globalHotkeyService.UndoLastAddHotkeyPressed += (s, e) => TryUndoLastAddMarker();
     }
 
-    public string Title =>
-        !PackState.IsWorkspaceLoaded || string.IsNullOrEmpty(PackState.ActiveDocumentPath)
-            ? "KX Map Studio"
-            : $"{Path.GetFileName(PackState.ActiveDocumentPath)}{(PackState.HasUnsavedChanges ? "*" : "")} - KX Map Studio";
+    public string Title
+    {
+        get
+        {
+            if (!PackState.IsWorkspaceLoaded || string.IsNullOrEmpty(PackState.ActiveDocumentPath))
+            {
+                return "KX Map Studio";
+            }
+
+            var unsavedIndicator = PackState.HasUnsavedChanges ? "*" : "";
+            var documentName = Path.GetFileName(PackState.ActiveDocumentPath);
+
+            if (PackState.IsWorkspaceArchive)
+            {
+                var archiveName = Path.GetFileName(PackState.WorkspacePath);
+                return $"{documentName}{unsavedIndicator} (in {archiveName}) - KX Map Studio";
+            }
+
+            return $"{documentName}{unsavedIndicator} - KX Map Studio";
+        }
+    }
 
     private void OnPackStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -140,12 +160,14 @@ public partial class MainViewModel : ObservableObject
         {
             case nameof(IPackStateService.IsWorkspaceLoaded):
             case nameof(IPackStateService.HasUnsavedChanges):
+            case nameof(IPackStateService.IsWorkspaceArchive):
                 OnPropertyChanged(nameof(Title));
                 CloseWorkspaceCommand.NotifyCanExecuteChanged();
                 SaveDocumentCommand.NotifyCanExecuteChanged();
                 SaveAsCommand.NotifyCanExecuteChanged();
                 break;
             case nameof(IPackStateService.ActiveDocumentPath):
+                OnPropertyChanged(nameof(Title));
                 UpdateMarkersInView();
                 AddMarkerFromGameCommand.NotifyCanExecuteChanged();
                 break;

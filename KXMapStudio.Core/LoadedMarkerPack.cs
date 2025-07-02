@@ -6,6 +6,8 @@ namespace KXMapStudio.Core
     {
         public required string FilePath { get; set; }
 
+        public bool IsArchive { get; set; }
+
         public required Category RootCategory { get; init; }
         public required Dictionary<string, byte[]> OriginalRawContent { get; init; }
         public required Dictionary<string, XDocument> XmlDocuments { get; init; }

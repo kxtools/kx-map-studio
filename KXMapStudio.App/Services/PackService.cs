@@ -13,12 +13,14 @@ public class PackService
     public async Task<PackLoadResult> LoadPackAsync(string path)
     {
         var originalRawContent = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        bool isArchive = false;
 
         if (File.Exists(path))
         {
             var extension = Path.GetExtension(path).ToLowerInvariant();
             if (extension is ".taco" or ".zip")
             {
+                isArchive = true;
                 using var archive = ZipFile.OpenRead(path);
                 foreach (var entry in archive.Entries)
                 {
@@ -60,6 +62,7 @@ public class PackService
         var loadedPack = new LoadedMarkerPack
         {
             FilePath = path,
+            IsArchive = isArchive,
             RootCategory = new Category { InternalName = "root", DisplayName = Path.GetFileNameWithoutExtension(path) },
             OriginalRawContent = originalRawContent,
             XmlDocuments = xmlDocuments,
@@ -99,13 +102,11 @@ public class PackService
                             }
                             else
                             {
-                                // It was called POI but was malformed, preserve it.
                                 unmanagedElementsForThisFile.Add(element);
                             }
                         }
                         else
                         {
-                            // It's a <trail> or something else we don't manage.
                             unmanagedElementsForThisFile.Add(element);
                         }
                     }

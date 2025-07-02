@@ -32,6 +32,8 @@ public partial class PackStateService : ObservableObject, IPackStateService
     [ObservableProperty]
     private bool _isWorkspaceLoaded;
 
+    public bool IsWorkspaceArchive => _workspacePack?.IsArchive ?? false;
+
     [ObservableProperty]
     private ObservableCollection<string> _workspaceFiles = new();
 
@@ -354,6 +356,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
         IsWorkspaceLoaded = pack != null;
         WorkspacePath = workspacePath;
         OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsWorkspaceArchive));
     }
 
     /// <summary>

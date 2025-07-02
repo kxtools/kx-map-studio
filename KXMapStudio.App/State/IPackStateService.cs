@@ -13,6 +13,7 @@ public interface IPackStateService : INotifyPropertyChanged
     string? WorkspacePath { get; }
     ObservableCollection<string> WorkspaceFiles { get; }
     bool IsWorkspaceLoaded { get; }
+    bool IsWorkspaceArchive { get; }
 
     string? ActiveDocumentPath { get; set; }
     Category? ActiveRootCategory { get; }
