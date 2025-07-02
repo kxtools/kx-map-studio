@@ -22,11 +22,10 @@ namespace KXMapStudio.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    // Private fields for commands (non-nullable, not readonly)
     private IRelayCommand _selectCategoryCommand = null!;
     private IAsyncRelayCommand _openFolderCommand = null!;
     private IAsyncRelayCommand _openFileCommand = null!;
-    private IRelayCommand _closeWorkspaceCommand = null!;
+    private IAsyncRelayCommand _closeWorkspaceCommand = null!;
     private IAsyncRelayCommand _saveDocumentCommand = null!;
     private IRelayCommand _addMarkerFromGameCommand = null!;
     private IRelayCommand _deleteSelectedMarkersCommand = null!;
@@ -41,11 +40,10 @@ public partial class MainViewModel : ObservableObject
     private IRelayCommand _openDiscordLinkCommand = null!;
     private IRelayCommand _openGitHubLinkCommand = null!;
 
-    // Public getters
     public IRelayCommand SelectCategoryCommand => _selectCategoryCommand;
     public IAsyncRelayCommand OpenFolderCommand => _openFolderCommand;
     public IAsyncRelayCommand OpenFileCommand => _openFileCommand;
-    public IRelayCommand CloseWorkspaceCommand => _closeWorkspaceCommand;
+    public IAsyncRelayCommand CloseWorkspaceCommand => _closeWorkspaceCommand;
     public IAsyncRelayCommand SaveDocumentCommand => _saveDocumentCommand;
     public IRelayCommand AddMarkerFromGameCommand => _addMarkerFromGameCommand;
     public IRelayCommand DeleteSelectedMarkersCommand => _deleteSelectedMarkersCommand;
@@ -105,7 +103,7 @@ public partial class MainViewModel : ObservableObject
         _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
-        _closeWorkspaceCommand = new RelayCommand(CloseWorkspace, () => PackState.IsWorkspaceLoaded);
+        _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
         _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges && !PackState.IsWorkspaceArchive);
         _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null);
         _deleteSelectedMarkersCommand = new RelayCommand(DeleteSelectedMarkers, () => PackState.SelectedMarkers.Any());
@@ -220,17 +218,32 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void CloseWorkspace() => PackState.CloseWorkspace();
+    private Task CloseWorkspaceAsync()
+    {
+        PackState.CloseWorkspace();
+        return Task.CompletedTask;
+    }
 
     private async Task SaveDocumentAsync()
     {
+        if (PackState.IsWorkspaceArchive)
+        {
+            _feedbackService.ShowMessage("Direct saving to an archive is disabled. Use 'File > Save As...' to save a copy.");
+            return;
+        }
+
         if (PackState.ActiveDocumentPath == null)
         {
             return;
         }
 
         await PackState.SaveActiveDocumentAsync();
-        _feedbackService.ShowMessage($"Saved {Path.GetFileName(PackState.ActiveDocumentPath)}");
+
+        // This check prevents the "Saved" message from showing if the save was cancelled (e.g., via a failed 'Save As' from an 'Untitled' file)
+        if (!PackState.HasUnsavedChanges)
+        {
+            _feedbackService.ShowMessage($"Saved {Path.GetFileName(PackState.ActiveDocumentPath)}");
+        }
     }
 
     private void AddMarkerFromGame() => PackState.AddMarkerFromGame();
