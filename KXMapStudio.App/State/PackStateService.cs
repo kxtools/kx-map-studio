@@ -41,9 +41,27 @@ public partial class PackStateService : ObservableObject, IPackStateService
     [ObservableProperty]
     private ObservableCollection<string> _workspaceFiles = new();
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasUnsavedChanges))]
     private string? _activeDocumentPath;
+    public string? ActiveDocumentPath
+    {
+        get => _activeDocumentPath;
+        set
+        {
+            if (EqualityComparer<string>.Default.Equals(_activeDocumentPath, value))
+            {
+                return;
+            }
+
+            if (_workspacePack?.HasUnsavedChangesFor(_activeDocumentPath) ?? false)
+            {
+                _ = PromptAndSwitchAsync(value);
+            }
+            else
+            {
+                SetAndLoadDocument(value);
+            }
+        }
+    }
 
     [ObservableProperty]
     private Category? _activeRootCategory;
@@ -61,8 +79,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
     private bool _isLoading;
 
     public bool HasUnsavedChanges =>
-        (ActiveDocumentPath != null && ActiveDocumentPath.StartsWith("Untitled")) ||
-        (_workspacePack?.HasUnsavedChangesFor(ActiveDocumentPath) ?? false);
+        (_workspacePack?.GetUnsavedDocumentPaths().Any() ?? false);
 
     #region Constructor and Initialization
 
@@ -94,46 +111,79 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public async Task<bool> CheckAndPromptToSaveChanges()
     {
-        if (!HasUnsavedChanges)
+        if (_workspacePack == null)
         {
             return true;
         }
 
-        string message;
-        if (IsWorkspaceArchive)
+        // We must operate on a copy of the list, because discarding changes will modify the source collections.
+        var unsavedPaths = _workspacePack.GetUnsavedDocumentPaths().ToList();
+        if (!unsavedPaths.Any())
         {
-            message = "You have unsaved changes to a file within an archive. Would you like to save a copy with 'Save As...' before proceeding?";
-        }
-        else
-        {
-            message = "You have unsaved changes. Would you like to save them before proceeding?";
+            return true;
         }
 
-        var result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-
-        switch (result)
+        foreach (var path in unsavedPaths)
         {
-            case MessageBoxResult.Yes:
-                bool saveSuccess;
-                if (IsWorkspaceArchive)
-                {
-                    // Use the new helper that saves without changing context.
-                    saveSuccess = await SaveAsAndContinueAsync();
-                }
-                else
-                {
-                    await SaveActiveDocumentAsync();
-                    saveSuccess = !HasUnsavedChanges;
-                }
-                return saveSuccess;
+            SetAndLoadDocument(path);
 
-            case MessageBoxResult.No:
-                return true;
+            string message;
+            if (IsWorkspaceArchive)
+            {
+                message = $"You have unsaved changes in '{path}' (from an archive). Would you like to save a copy?";
+            }
+            else
+            {
+                message = $"You have unsaved changes in '{path}'. Would you like to save them?";
+            }
 
-            case MessageBoxResult.Cancel:
-            default:
-                return false;
+            var result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    bool saveSuccess;
+                    if (IsWorkspaceArchive)
+                    {
+                        saveSuccess = await SaveAsAndContinueAsync();
+                    }
+                    else
+                    {
+                        await SaveActiveDocumentAsync();
+                        saveSuccess = !(_workspacePack?.HasUnsavedChangesFor(path) ?? true);
+                    }
+
+                    if (!saveSuccess)
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case MessageBoxResult.No:
+                    // User chose to discard changes for this file. We must clear its dirty state now.
+                    if (_workspacePack != null)
+                    {
+                        _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(path, StringComparison.OrdinalIgnoreCase));
+                        _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(path, StringComparison.OrdinalIgnoreCase));
+                        if (_workspacePack.MarkersByFile.TryGetValue(path, out var markers))
+                        {
+                            foreach (var marker in markers)
+                            {
+                                marker.IsDirty = false;
+                            }
+                        }
+                    }
+                    OnPropertyChanged(nameof(HasUnsavedChanges));
+                    continue; // Continue to the next unsaved file.
+
+                case MessageBoxResult.Cancel:
+                default:
+                    return false;
+            }
         }
+
+        return true;
     }
 
     public async Task OpenWorkspaceAsync(string path)
@@ -223,7 +273,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
             fullSavePath = WorkspacePath;
         }
 
-        // This now calls the dedicated method for saving an existing file.
         await WriteActiveDocumentToPath(fullSavePath, ActiveDocumentPath);
     }
 
@@ -266,10 +315,9 @@ public partial class PackStateService : ObservableObject, IPackStateService
         );
         _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
 
-        // Use the new centralized disk writing method.
         if (!await WriteDocumentToDiskAsync(newDoc, newFilePath))
         {
-            return; // Stop if the physical save fails.
+            return;
         }
 
         byte[] newRawContent;
@@ -319,13 +367,14 @@ public partial class PackStateService : ObservableObject, IPackStateService
         _newFileCounter++;
 
         _logger.LogInformation("Creating a new untitled file.");
+        var untitledName = $"Untitled-{_newFileCounter}.xml";
+
         var newDoc = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             new XElement(TacoXmlConstants.OverlayDataElement,
                 new XElement(TacoXmlConstants.PoisElement)
             )
         );
-        var untitledName = $"Untitled-{_newFileCounter}.xml";
 
         var newLoadedPack = new LoadedMarkerPack
         {
@@ -384,19 +433,35 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     #endregion
 
-    #region Observable/Property Handlers
+    #region Private Helpers
 
-    partial void OnActiveDocumentPathChanged(string? value)
+    private async Task PromptAndSwitchAsync(string? newValue)
     {
-        _logger.LogInformation("Activating document: {DocumentPath}", value);
-        LoadActiveDocumentIntoView();
-        OnPropertyChanged(nameof(HasUnsavedChanges));
-        _historyService.Clear();
+        bool canProceed = await CheckAndPromptToSaveChanges();
+
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (canProceed)
+            {
+                SetAndLoadDocument(newValue);
+            }
+            else
+            {
+                OnPropertyChanged(nameof(ActiveDocumentPath));
+            }
+        });
     }
 
-    #endregion
-
-    #region Private Helpers
+    private void SetAndLoadDocument(string? newPath)
+    {
+        if (SetProperty(ref _activeDocumentPath, newPath, nameof(ActiveDocumentPath)))
+        {
+            _logger.LogInformation("Activating document: {DocumentPath}", newPath);
+            LoadActiveDocumentIntoView();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            _historyService.Clear();
+        }
+    }
 
     private void LoadActiveDocumentIntoView()
     {
@@ -453,7 +518,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         SelectedMarkers.Clear();
         SelectedCategory = null;
         _historyService.Clear();
-        // Do NOT reset _newFileCounter here, so it's unique per session.
     }
 
     private void SetWorkspaceState(string? workspacePath, LoadedMarkerPack? pack)
@@ -465,10 +529,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
         OnPropertyChanged(nameof(IsWorkspaceArchive));
     }
 
-    /// <summary>
-    /// Writes the active document's content to a specified path and synchronizes the in-memory state.
-    /// </summary>
-    private async Task WriteActiveDocumentToPath(string saveDiskPath, string sourceKeyForWorkspace, bool isSaveAs = false)
+    private async Task WriteActiveDocumentToPath(string saveDiskPath, string sourceKeyForWorkspace)
     {
         if (_workspacePack == null)
         {
@@ -487,10 +548,9 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
         if (!await WriteDocumentToDiskAsync(docToSave, saveDiskPath))
         {
-            return; // Stop if physical save fails.
+            return;
         }
 
-        // Update in-memory state after a successful save
         using (var ms = new MemoryStream())
         {
             await docToSave.SaveAsync(ms, SaveOptions.DisableFormatting, CancellationToken.None);

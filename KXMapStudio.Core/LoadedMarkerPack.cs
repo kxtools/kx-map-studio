@@ -45,5 +45,28 @@ namespace KXMapStudio.Core
 
             return false;
         }
+
+        public IEnumerable<string> GetUnsavedDocumentPaths()
+        {
+            // Use a HashSet to avoid returning duplicate paths.
+            var unsavedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Check for any markers that have been added or deleted.
+            foreach (var marker in AddedMarkers.Concat(DeletedMarkers))
+            {
+                unsavedPaths.Add(marker.SourceFile);
+            }
+
+            // Check for any markers that have been modified.
+            foreach (var fileEntry in MarkersByFile)
+            {
+                if (fileEntry.Value.Any(m => m.IsDirty))
+                {
+                    unsavedPaths.Add(fileEntry.Key);
+                }
+            }
+
+            return unsavedPaths;
+        }
     }
 }

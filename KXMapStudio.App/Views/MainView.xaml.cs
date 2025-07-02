@@ -28,19 +28,26 @@ namespace KXMapStudio.App.Views
                 return;
             }
 
-            if (vm.PackState.HasUnsavedChanges)
+            if (!vm.PackState.HasUnsavedChanges)
             {
-                e.Cancel = true;
-
-                bool canProceed = await vm.PackState.CheckAndPromptToSaveChanges();
-
-                if (canProceed)
-                {
-                    // It will enter this event handler again, but HasUnsavedChanges will be false.
-                    this.Closing -= MainView_Closing;
-                    this.Close();
-                }
+                return; // No unsaved changes, let the window close normally.
             }
+
+            // 1. Immediately cancel the original close event to give our async code time to run.
+            e.Cancel = true;
+
+            // 2. Ask the user what to do with their unsaved changes.
+            bool canProceed = await vm.PackState.CheckAndPromptToSaveChanges();
+
+            // 3. If the user action succeeded (saved or discarded), shut down the application.
+            if (canProceed)
+            {
+                // This is the key change. Instead of trying to close the window again,
+                // we tell the entire application to shut down. This is safe and avoids the exception.
+                Application.Current.Shutdown();
+            }
+            // If canProceed is false, the user clicked "Cancel", and we do nothing,
+            // leaving the window open as intended.
         }
 
         private void DataGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
