@@ -108,11 +108,27 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0"
-                           Text="{Binding AppVersion}"
-                           Style="{StaticResource MaterialDesignBody2TextBlock}"
-                           Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}"
-                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding AppVersion}"
+                               Style="{StaticResource MaterialDesignBody2TextBlock}"
+                               Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}"
+                               VerticalAlignment="Center" Margin="16,0,0,0"/>
+
+                    <TextBlock Style="{StaticResource MaterialDesignBody2TextBlock}"
+                               Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               Margin="16,0,0,0"
+                               VerticalAlignment="Center"
+                               ToolTip="{Binding LatestRelease.Name, StringFormat='Click to view details for {0}'}">
+                        <Hyperlink Command="{Binding AcknowledgeUpdateCommand}"
+                                   TextDecorations="None"
+                                   FontWeight="Bold">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Download" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                <TextBlock Text="New Version Available!" />
+                            </StackPanel>
+                        </Hyperlink>
+                    </TextBlock>
+                </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0">
                     <TextBlock Text="{x:Static utilities:Constants.KxToolsSlogan}"

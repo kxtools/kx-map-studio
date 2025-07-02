@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using KXMapStudio.App.Actions;
+using KXMapStudio.App.Models;
 using KXMapStudio.App.Services;
 using KXMapStudio.App.State;
 using KXMapStudio.App.Utilities;
@@ -39,6 +40,7 @@ public partial class MainViewModel : ObservableObject
     private IRelayCommand _openKxToolsWebsiteCommand = null!;
     private IRelayCommand _openDiscordLinkCommand = null!;
     private IRelayCommand _openGitHubLinkCommand = null!;
+    private IRelayCommand<string> _openLinkCommand = null!;
 
     public IRelayCommand SelectCategoryCommand => _selectCategoryCommand;
     public IAsyncRelayCommand OpenFolderCommand => _openFolderCommand;
@@ -57,6 +59,7 @@ public partial class MainViewModel : ObservableObject
     public IRelayCommand OpenKxToolsWebsiteCommand => _openKxToolsWebsiteCommand;
     public IRelayCommand OpenDiscordLinkCommand => _openDiscordLinkCommand;
     public IRelayCommand OpenGitHubLinkCommand => _openGitHubLinkCommand;
+    public IRelayCommand<string> OpenLinkCommand => _openLinkCommand;
 
     public IPackStateService PackState { get; }
     public MumbleService MumbleService { get; }
@@ -71,6 +74,13 @@ public partial class MainViewModel : ObservableObject
     private readonly IFeedbackService _feedbackService;
     private readonly HistoryService _historyService;
     private readonly GlobalHotkeyService _globalHotkeyService;
+    private readonly UpdateService _updateService;
+
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
+
+    [ObservableProperty]
+    private GitHubRelease? _latestRelease;
 
     public MainViewModel(
         IPackStateService packStateService,
@@ -78,7 +88,8 @@ public partial class MainViewModel : ObservableObject
         PropertyEditorViewModel propertyEditorViewModel,
         IFeedbackService feedbackService,
         HistoryService historyService,
-        GlobalHotkeyService globalHotkeyService)
+        GlobalHotkeyService globalHotkeyService,
+        UpdateService updateService)
     {
         PackState = packStateService;
         MumbleService = mumbleService;
@@ -86,12 +97,15 @@ public partial class MainViewModel : ObservableObject
         _feedbackService = feedbackService;
         _historyService = historyService;
         _globalHotkeyService = globalHotkeyService;
+        _updateService = updateService;
 
         AppVersion = $"Version {Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Unknown"}";
 
         SetupCommands();
         WireEvents();
         SetupHotkeys();
+
+        _ = CheckForUpdatesOnStartup();
     }
 
     private void SetupCommands()
@@ -111,9 +125,10 @@ public partial class MainViewModel : ObservableObject
         _undoCommand = new RelayCommand(_historyService.Undo, () => _historyService.CanUndo);
         _redoCommand = new RelayCommand(_historyService.Redo, () => _historyService.CanRedo);
 
-        _openKxToolsWebsiteCommand = new RelayCommand(() => OpenLink(Constants.KxToolsWebsiteUrl));
-        _openDiscordLinkCommand = new RelayCommand(() => OpenLink(Constants.DiscordInviteUrl));
-        _openGitHubLinkCommand = new RelayCommand(() => OpenLink(Constants.GitHubRepoUrl));
+        _openLinkCommand = new RelayCommand<string>(OpenLink);
+        _openKxToolsWebsiteCommand = new RelayCommand(() => _openLinkCommand.Execute(Constants.KxToolsWebsiteUrl));
+        _openDiscordLinkCommand = new RelayCommand(() => _openLinkCommand.Execute(Constants.DiscordInviteUrl));
+        _openGitHubLinkCommand = new RelayCommand(() => _openLinkCommand.Execute(Constants.GitHubRepoUrl));
     }
 
     private void WireEvents()
@@ -226,12 +241,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task SaveDocumentAsync()
     {
-        if (PackState.IsWorkspaceArchive)
-        {
-            _feedbackService.ShowMessage("Direct saving to an archive is disabled. Use 'File > Save As...' to save a copy.");
-            return;
-        }
-
         if (PackState.ActiveDocumentPath == null)
         {
             return;
@@ -239,7 +248,6 @@ public partial class MainViewModel : ObservableObject
 
         await PackState.SaveActiveDocumentAsync();
 
-        // This check prevents the "Saved" message from showing if the save was cancelled (e.g., via a failed 'Save As' from an 'Untitled' file)
         if (!PackState.HasUnsavedChanges)
         {
             _feedbackService.ShowMessage($"Saved {Path.GetFileName(PackState.ActiveDocumentPath)}");
@@ -356,8 +364,13 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void OpenLink(string url)
+    private void OpenLink(string? url)
     {
+        if (string.IsNullOrEmpty(url))
+        {
+            return;
+        }
+
         try
         {
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
@@ -365,6 +378,30 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _feedbackService.ShowMessage($"Could not open link: {ex.Message}", "OK");
+        }
+    }
+
+    [RelayCommand]
+    private void AcknowledgeUpdate()
+    {
+        if (LatestRelease != null)
+        {
+            OpenLink(LatestRelease.HtmlUrl);
+            IsUpdateAvailable = false;
+        }
+    }
+
+    private async Task CheckForUpdatesOnStartup()
+    {
+        var (isNewVersionAvailable, latestRelease) = await _updateService.CheckForUpdatesAsync();
+
+        if (isNewVersionAvailable && latestRelease != null)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                LatestRelease = latestRelease;
+                IsUpdateAvailable = true;
+            });
         }
     }
 }
