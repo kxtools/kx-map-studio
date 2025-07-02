@@ -119,7 +119,7 @@ public partial class MainViewModel : ObservableObject
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
         _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges && !PackState.IsWorkspaceArchive);
-        _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null);
+        _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null && MumbleService.IsAvailable);
         _deleteSelectedMarkersCommand = new RelayCommand(DeleteSelectedMarkers, () => PackState.SelectedMarkers.Any());
         _copySelectedMarkerGuidCommand = new RelayCommand(CopySelectedMarkerGuid, () => PackState.SelectedMarkers.Count == 1);
         _undoCommand = new RelayCommand(_historyService.Undo, () => _historyService.CanUndo);
@@ -137,6 +137,7 @@ public partial class MainViewModel : ObservableObject
         PackState.PropertyChanged += OnPackStateChanged;
         PackState.SelectedMarkers.CollectionChanged += OnSelectedMarkersChanged;
         _historyService.PropertyChanged += OnHistoryChanged;
+        MumbleService.PropertyChanged += OnMumbleServiceChanged;
     }
 
     private void SetupHotkeys()
@@ -213,6 +214,15 @@ public partial class MainViewModel : ObservableObject
         else if (e.PropertyName == nameof(HistoryService.CanRedo))
         {
             RedoCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private void OnMumbleServiceChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MumbleService.IsAvailable))
+        {
+            // When Mumble's availability changes, tell the command to re-evaluate its state.
+            AddMarkerFromGameCommand.NotifyCanExecuteChanged();
         }
     }
 
