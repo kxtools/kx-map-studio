@@ -1,8 +1,8 @@
 ﻿# KX Map Studio
 
-<div align="center">
-  ![KX Map Studio Logo](images/kxmapstudio_logo.png)
-</div>
+<p align="center">
+  <img src="images/kxmapstudio_logo.png" alt="KX Map Studio Logo">
+</p>
 
 > ⚠️ **Early Access Notice (v0.1.0):** This is an **early release** and is still under active development. It has not been thoroughly tested, and certain features may not work reliably. **Large marker files may cause issues**, and stability is not guaranteed yet.
 
@@ -10,10 +10,9 @@
 
 ## GUI Preview
 
-<div align="center">
-  <!-- Replace with actual screenshot file -->
-  ![App Screenshot](images/app_screenshot.png)
-</div>
+<p align="center">
+  <img src="images/app_screenshot.png" alt="App Screenshot">
+</p>
 
 ---
 
