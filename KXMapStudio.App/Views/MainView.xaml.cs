@@ -28,9 +28,6 @@ namespace KXMapStudio.App.Views
                 return;
             }
 
-            // We must set e.Cancel = true *before* the async call.
-            // If the user needs to save, the window will try to close before the save dialog appears.
-            // We'll un-cancel it if the operation is allowed to proceed.
             if (vm.PackState.HasUnsavedChanges)
             {
                 e.Cancel = true;
@@ -39,9 +36,9 @@ namespace KXMapStudio.App.Views
 
                 if (canProceed)
                 {
-                    // Un-cancel the closing event and close the application.
-                    e.Cancel = false;
-                    Application.Current.Shutdown();
+                    // It will enter this event handler again, but HasUnsavedChanges will be false.
+                    this.Closing -= MainView_Closing;
+                    this.Close();
                 }
             }
         }
