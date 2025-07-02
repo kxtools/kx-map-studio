@@ -1,0 +1,335 @@
+﻿using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.IO;
+using System.Windows;
+using System.Diagnostics;
+using System.Reflection;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using KXMapStudio.App.Actions;
+using KXMapStudio.App.Services;
+using KXMapStudio.App.State;
+using KXMapStudio.App.Utilities;
+using KXMapStudio.App.ViewModels.PropertyEditor;
+using KXMapStudio.Core;
+using Microsoft.Win32;
+using Microsoft.WindowsAPICodePack.Dialogs;
+
+namespace KXMapStudio.App.ViewModels;
+
+public partial class MainViewModel : ObservableObject
+{
+    // Private fields for commands (non-nullable, not readonly)
+    private IRelayCommand _selectCategoryCommand = null!;
+    private IAsyncRelayCommand _openFolderCommand = null!;
+    private IAsyncRelayCommand _openFileCommand = null!;
+    private IRelayCommand _closeWorkspaceCommand = null!;
+    private IAsyncRelayCommand _saveDocumentCommand = null!;
+    private IRelayCommand _addMarkerFromGameCommand = null!;
+    private IRelayCommand _deleteSelectedMarkersCommand = null!;
+    private IRelayCommand _copySelectedMarkerGuidCommand = null!;
+    private IRelayCommand _undoCommand = null!;
+    private IRelayCommand _redoCommand = null!;
+    private IRelayCommand _moveSelectedMarkersUpCommand = null!;
+    private IRelayCommand _moveSelectedMarkersDownCommand = null!;
+    private IAsyncRelayCommand _newFileCommand = null!;
+    private IAsyncRelayCommand _saveAsCommand = null!;
+    private IRelayCommand _openKxToolsWebsiteCommand = null!;
+    private IRelayCommand _openDiscordLinkCommand = null!;
+    private IRelayCommand _openGitHubLinkCommand = null!;
+
+    // Public getters
+    public IRelayCommand SelectCategoryCommand => _selectCategoryCommand;
+    public IAsyncRelayCommand OpenFolderCommand => _openFolderCommand;
+    public IAsyncRelayCommand OpenFileCommand => _openFileCommand;
+    public IRelayCommand CloseWorkspaceCommand => _closeWorkspaceCommand;
+    public IAsyncRelayCommand SaveDocumentCommand => _saveDocumentCommand;
+    public IRelayCommand AddMarkerFromGameCommand => _addMarkerFromGameCommand;
+    public IRelayCommand DeleteSelectedMarkersCommand => _deleteSelectedMarkersCommand;
+    public IRelayCommand CopySelectedMarkerGuidCommand => _copySelectedMarkerGuidCommand;
+    public IRelayCommand UndoCommand => _undoCommand;
+    public IRelayCommand RedoCommand => _redoCommand;
+    public IRelayCommand MoveSelectedMarkersUpCommand => _moveSelectedMarkersUpCommand;
+    public IRelayCommand MoveSelectedMarkersDownCommand => _moveSelectedMarkersDownCommand;
+    public IAsyncRelayCommand NewFileCommand => _newFileCommand;
+    public IAsyncRelayCommand SaveAsCommand => _saveAsCommand;
+    public IRelayCommand OpenKxToolsWebsiteCommand => _openKxToolsWebsiteCommand;
+    public IRelayCommand OpenDiscordLinkCommand => _openDiscordLinkCommand;
+    public IRelayCommand OpenGitHubLinkCommand => _openGitHubLinkCommand;
+
+    public IPackStateService PackState { get; }
+    public MumbleService MumbleService { get; }
+    public PropertyEditorViewModel PropertyEditorViewModel { get; }
+
+    [ObservableProperty]
+    private ObservableCollection<Marker> _markersInView = new();
+
+    public GlobalHotkeyService GlobalHotkeys => _globalHotkeyService;
+    public string AppVersion { get; }
+
+    private readonly IFeedbackService _feedbackService;
+    private readonly HistoryService _historyService;
+    private readonly GlobalHotkeyService _globalHotkeyService;
+
+    public MainViewModel(
+        IPackStateService packStateService,
+        MumbleService mumbleService,
+        PropertyEditorViewModel propertyEditorViewModel,
+        IFeedbackService feedbackService,
+        HistoryService historyService,
+        GlobalHotkeyService globalHotkeyService)
+    {
+        PackState = packStateService;
+        MumbleService = mumbleService;
+        PropertyEditorViewModel = propertyEditorViewModel;
+        _feedbackService = feedbackService;
+        _historyService = historyService;
+        _globalHotkeyService = globalHotkeyService;
+
+        AppVersion = $"Version {Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Unknown"}";
+
+        SetupCommands();
+        WireEvents();
+        SetupHotkeys();
+    }
+
+    private void SetupCommands()
+    {
+        _selectCategoryCommand = new RelayCommand<object>(HandleSelectCategory);
+        _newFileCommand = new AsyncRelayCommand(PackState.NewFileAsync);
+        _saveAsCommand = new AsyncRelayCommand(PackState.SaveActiveDocumentAsAsync, () => PackState.IsWorkspaceLoaded);
+        _moveSelectedMarkersUpCommand = new RelayCommand(MoveSelectedMarkersUp, CanMoveSelectedMarkersUp);
+        _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
+        _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
+        _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
+        _closeWorkspaceCommand = new RelayCommand(CloseWorkspace, () => PackState.IsWorkspaceLoaded);
+        _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges);
+        _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null);
+        _deleteSelectedMarkersCommand = new RelayCommand(DeleteSelectedMarkers, () => PackState.SelectedMarkers.Any());
+        _copySelectedMarkerGuidCommand = new RelayCommand(CopySelectedMarkerGuid, () => PackState.SelectedMarkers.Count == 1);
+        _undoCommand = new RelayCommand(_historyService.Undo, () => _historyService.CanUndo);
+        _redoCommand = new RelayCommand(_historyService.Redo, () => _historyService.CanRedo);
+
+        _openKxToolsWebsiteCommand = new RelayCommand(() => OpenLink(Constants.KxToolsWebsiteUrl));
+        _openDiscordLinkCommand = new RelayCommand(() => OpenLink(Constants.DiscordInviteUrl));
+        _openGitHubLinkCommand = new RelayCommand(() => OpenLink(Constants.GitHubRepoUrl));
+    }
+
+    private void WireEvents()
+    {
+        PackState.ActiveDocumentMarkers.CollectionChanged += OnActiveDocumentMarkersChanged;
+        PackState.PropertyChanged += OnPackStateChanged;
+        PackState.SelectedMarkers.CollectionChanged += OnSelectedMarkersChanged;
+        _historyService.PropertyChanged += OnHistoryChanged;
+    }
+
+    private void SetupHotkeys()
+    {
+        _globalHotkeyService.AddMarkerHotkeyPressed += (s, e) => AddMarkerFromGameCommand.Execute(null);
+        _globalHotkeyService.UndoLastAddHotkeyPressed += (s, e) => TryUndoLastAddMarker();
+    }
+
+    public string Title =>
+        !PackState.IsWorkspaceLoaded || string.IsNullOrEmpty(PackState.ActiveDocumentPath)
+            ? "KX Map Studio"
+            : $"{Path.GetFileName(PackState.ActiveDocumentPath)}{(PackState.HasUnsavedChanges ? "*" : "")} - KX Map Studio";
+
+    private void OnPackStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(IPackStateService.IsWorkspaceLoaded):
+            case nameof(IPackStateService.HasUnsavedChanges):
+                OnPropertyChanged(nameof(Title));
+                CloseWorkspaceCommand.NotifyCanExecuteChanged();
+                SaveDocumentCommand.NotifyCanExecuteChanged();
+                SaveAsCommand.NotifyCanExecuteChanged();
+                break;
+            case nameof(IPackStateService.ActiveDocumentPath):
+                UpdateMarkersInView();
+                AddMarkerFromGameCommand.NotifyCanExecuteChanged();
+                break;
+            case nameof(IPackStateService.SelectedCategory):
+                UpdateMarkersInView();
+                break;
+        }
+    }
+
+    private void OnSelectedMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        DeleteSelectedMarkersCommand.NotifyCanExecuteChanged();
+        CopySelectedMarkerGuidCommand.NotifyCanExecuteChanged();
+        MoveSelectedMarkersUpCommand.NotifyCanExecuteChanged();
+        MoveSelectedMarkersDownCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnHistoryChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(HistoryService.CanUndo))
+        {
+            UndoCommand.NotifyCanExecuteChanged();
+        }
+        else if (e.PropertyName == nameof(HistoryService.CanRedo))
+        {
+            RedoCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private void OnActiveDocumentMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        UpdateMarkersInView();
+    }
+
+    private async Task OpenFolderAsync()
+    {
+        var dialog = new CommonOpenFileDialog { Title = "Select Workspace Folder", IsFolderPicker = true };
+        if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+        {
+            await PackState.OpenWorkspaceAsync(dialog.FileName);
+        }
+    }
+
+    private async Task OpenFileAsync()
+    {
+        var dialog = new OpenFileDialog { Title = "Open Marker File", Filter = "Supported Files (*.taco, *.zip, *.xml)|*.taco;*.zip;*.xml|All files (*.*)|*.*" };
+        if (dialog.ShowDialog() == true)
+        {
+            await PackState.OpenWorkspaceAsync(dialog.FileName);
+        }
+    }
+
+    private void CloseWorkspace() => PackState.CloseWorkspace();
+
+    private async Task SaveDocumentAsync()
+    {
+        if (PackState.ActiveDocumentPath == null)
+        {
+            return;
+        }
+
+        await PackState.SaveActiveDocumentAsync();
+        _feedbackService.ShowMessage($"Saved {Path.GetFileName(PackState.ActiveDocumentPath)}");
+    }
+
+    private void AddMarkerFromGame() => PackState.AddMarkerFromGame();
+    private void DeleteSelectedMarkers() => PackState.DeleteSelectedMarkers();
+
+    private void CopySelectedMarkerGuid()
+    {
+        if (PackState.SelectedMarkers.Count != 1)
+        {
+            return;
+        }
+
+        var guid = PackState.SelectedMarkers.First().GuidFormatted;
+        Clipboard.SetText(guid);
+        _feedbackService.ShowMessage($"Copied GUID: {guid}", "DISMISS");
+    }
+
+    private void HandleSelectCategory(object? eventArgs)
+    {
+        if (eventArgs is RoutedPropertyChangedEventArgs<object> args)
+        {
+            PackState.SelectedCategory = args.NewValue as Category;
+        }
+    }
+
+    private void MoveSelectedMarkersUp()
+    {
+        var selection = new List<Marker>(PackState.SelectedMarkers);
+        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, selection, ReorderDirection.Up);
+        action.Execute();
+        _historyService.Record(action);
+    }
+
+    private bool CanMoveSelectedMarkersUp()
+    {
+        if (!PackState.SelectedMarkers.Any())
+        {
+            return false;
+        }
+
+        int minIndex = PackState.SelectedMarkers.Min(m => PackState.ActiveDocumentMarkers.IndexOf(m));
+        return minIndex > 0;
+    }
+
+    private void MoveSelectedMarkersDown()
+    {
+        var selection = new List<Marker>(PackState.SelectedMarkers);
+        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, selection, ReorderDirection.Down);
+        action.Execute();
+        _historyService.Record(action);
+    }
+
+    private bool CanMoveSelectedMarkersDown()
+    {
+        if (!PackState.SelectedMarkers.Any())
+        {
+            return false;
+        }
+
+        int maxIndex = PackState.SelectedMarkers.Max(m => PackState.ActiveDocumentMarkers.IndexOf(m));
+        return maxIndex < PackState.ActiveDocumentMarkers.Count - 1;
+    }
+
+    private void TryUndoLastAddMarker()
+    {
+        if (_historyService.CanUndo && _historyService.PeekLastActionType() == ActionType.AddMarker)
+        {
+            _historyService.Undo();
+            _feedbackService.ShowMessage("Undid last marker addition via hotkey.");
+        }
+        else
+        {
+            _feedbackService.ShowMessage("Cannot undo: last action was not a marker addition.", actionContent: "OK");
+        }
+    }
+
+    private void UpdateMarkersInView()
+    {
+        var selectionToRestore = new List<Marker>(PackState.SelectedMarkers);
+        MarkersInView.Clear();
+
+        var selectedCategory = PackState.SelectedCategory;
+        if (selectedCategory == null)
+        {
+            if (PackState.IsWorkspaceLoaded)
+            {
+                foreach (var marker in PackState.ActiveDocumentMarkers)
+                {
+                    MarkersInView.Add(marker);
+                }
+            }
+        }
+        else
+        {
+            var markersToDisplay = PackState.ActiveDocumentMarkers.Where(m =>
+                m.Type != null && m.Type.StartsWith(selectedCategory.FullName, System.StringComparison.OrdinalIgnoreCase));
+            foreach (var marker in markersToDisplay)
+            {
+                MarkersInView.Add(marker);
+            }
+        }
+
+        PackState.SelectedMarkers.Clear();
+        foreach (var marker in selectionToRestore)
+        {
+            if (MarkersInView.Contains(marker))
+            {
+                PackState.SelectedMarkers.Add(marker);
+            }
+        }
+    }
+
+    private void OpenLink(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            _feedbackService.ShowMessage($"Could not open link: {ex.Message}", "OK");
+        }
+    }
+}

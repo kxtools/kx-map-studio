@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36221.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KXMapStudio.App", "KXMapStudio.App\KXMapStudio.App.csproj", "{07DA36D9-B306-4906-AD37-6473F4AFCB33}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KXMapStudio.Core", "KXMapStudio.Core\KXMapStudio.Core.csproj", "{98764FCC-A1A7-4E6F-BF76-3A0D01E1EF0B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{07DA36D9-B306-4906-AD37-6473F4AFCB33}.Debug|x64.ActiveCfg = Debug|x64
+		{07DA36D9-B306-4906-AD37-6473F4AFCB33}.Debug|x64.Build.0 = Debug|x64
+		{07DA36D9-B306-4906-AD37-6473F4AFCB33}.Release|x64.ActiveCfg = Release|x64
+		{07DA36D9-B306-4906-AD37-6473F4AFCB33}.Release|x64.Build.0 = Release|x64
+		{98764FCC-A1A7-4E6F-BF76-3A0D01E1EF0B}.Debug|x64.ActiveCfg = Debug|x64
+		{98764FCC-A1A7-4E6F-BF76-3A0D01E1EF0B}.Debug|x64.Build.0 = Debug|x64
+		{98764FCC-A1A7-4E6F-BF76-3A0D01E1EF0B}.Release|x64.ActiveCfg = Release|x64
+		{98764FCC-A1A7-4E6F-BF76-3A0D01E1EF0B}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FE076018-77BF-4445-B485-1EB3BB624089}
+	EndGlobalSection
+EndGlobal

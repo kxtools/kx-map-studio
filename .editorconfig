@@ -1,0 +1,193 @@
+﻿# Top-most EditorConfig file
+# PRO-TIP: Edit this file as plain text to avoid the VS UI adding clutter.
+root = true
+
+# All files
+[*]
+charset = utf-8-bom
+end_of_line = crlf
+indent_style = space
+insert_final_newline = true
+
+# Xml files
+[*.xml]
+indent_size = 2
+
+# C# files
+[*.cs]
+indent_size = 4
+tab_width = 4 # Redundant when indent_style = space, but harmless
+
+#------------------------------------------------------------------
+# C# CODING STYLE
+#------------------------------------------------------------------
+[*.{cs,vb}]
+
+# 'using' Directive Preferences
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = true
+csharp_using_directive_placement = outside_namespace:suggestion
+
+# 'var' Preferences (Modern Style)
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# 'this.' and Me. preferences (Clarity)
+dotnet_style_qualification_for_field = true:suggestion
+dotnet_style_qualification_for_property = true:suggestion
+dotnet_style_qualification_for_method = false:silent
+dotnet_style_qualification_for_event = false:silent
+
+# Expression-bodied members
+csharp_style_expression_bodied_accessors = true:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_lambdas = true:suggestion
+
+# General Modern C# Pattern Preferences
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_index_operator = true:suggestion
+csharp_style_prefer_range_operator = true:suggestion
+csharp_prefer_simple_default_expression = true:suggestion
+csharp_style_prefer_method_group_conversion = true:suggestion
+csharp_prefer_system_threading_lock = true:suggestion
+
+# C# 12+ and Organizational Preferences
+dotnet_style_namespace_match_folder = true:warning
+dotnet_style_prefer_collection_expression = true:suggestion
+csharp_style_prefer_primary_constructors = true:suggestion
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+
+#------------------------------------------------------------------
+# C# FORMATTING RULES
+#------------------------------------------------------------------
+
+# Namespace and Brace Preferences
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = true:warning
+
+# Operator wrapping
+dotnet_style_operator_placement_when_wrapping = beginning_of_line
+
+#------------------------------------------------------------------
+# C# NAMING CONVENTIONS (Comprehensive set for modern C#)
+#------------------------------------------------------------------
+
+# Define symbol groups based on kind, accessibility, modifiers etc.
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = public, internal, private, protected
+
+dotnet_naming_symbols.types.applicable_kinds = class, struct, record, enum
+dotnet_naming_symbols.types.applicable_accessibilities = public, internal, private, protected
+
+dotnet_naming_symbols.public_members.applicable_kinds = property, method, event, field # Include public fields for completeness, although rare
+dotnet_naming_symbols.public_members.applicable_accessibilities = public
+
+dotnet_naming_symbols.internal_protected_members.applicable_kinds = property, method, event, field
+dotnet_naming_symbols.internal_protected_members.applicable_accessibilities = internal, protected
+
+dotnet_naming_symbols.parameters.applicable_kinds = parameter
+
+dotnet_naming_symbols.local_variables.applicable_kinds = local
+
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static, readonly
+dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities = public, internal, private, protected # Apply PascalCase regardless of access
+
+dotnet_naming_symbols.enum_members.applicable_kinds = enum_member
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+
+# Define naming styles (capitalization, prefixes, suffixes)
+dotnet_naming_style.pascal_case_with_i_prefix.required_prefix = I
+dotnet_naming_style.pascal_case_with_i_prefix.capitalization = pascal_case
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+dotnet_naming_style.camel_case_with_underscore.required_prefix = _
+dotnet_naming_style.camel_case_with_underscore.capitalization = camel_case
+
+
+# Associate rules (severity: suggestion, warning, error)
+# Types (Classes, Structs, Records, Enums) should be PascalCase
+dotnet_naming_rule.types_pascal_case.symbols = types
+dotnet_naming_rule.types_pascal_case.style = pascal_case
+dotnet_naming_rule.types_pascal_case.severity = warning # Important for consumers
+
+# Public members (Properties, Methods, Events, Fields) should be PascalCase
+dotnet_naming_rule.public_members_pascal_case.symbols = public_members
+dotnet_naming_rule.public_members_pascal_case.style = pascal_case
+dotnet_naming_rule.public_members_pascal_case.severity = warning # Important for consumers
+
+# Internal/Protected members (Properties, Methods, Events, Fields) should be PascalCase
+# This rule overlaps with public_members_pascal_case for public members,
+# but is still needed to cover internal/protected explicitly.
+dotnet_naming_rule.internal_protected_members_pascal_case.symbols = internal_protected_members
+dotnet_naming_rule.internal_protected_members_pascal_case.style = pascal_case
+dotnet_naming_rule.internal_protected_members_pascal_case.severity = suggestion # Less critical than public API
+
+# Interfaces should be IPascalCase (Your existing rule)
+dotnet_naming_rule.interfaces_should_be_pascal_case_with_i.symbols = interfaces
+dotnet_naming_rule.interfaces_should_be_pascal_case_with_i.style = pascal_case_with_i_prefix
+dotnet_naming_rule.interfaces_should_be_pascal_case_with_i.severity = suggestion
+
+# Parameters should be camelCase
+dotnet_naming_rule.parameters_camel_case.symbols = parameters
+dotnet_naming_rule.parameters_camel_case.style = camel_case
+dotnet_naming_rule.parameters_camel_case.severity = suggestion
+
+# Local variables should be camelCase
+dotnet_naming_rule.local_variables_camel_case.symbols = local_variables
+dotnet_naming_rule.local_variables_camel_case.style = camel_case
+dotnet_naming_rule.local_variables_camel_case.severity = suggestion
+
+# Constants (const fields) should be PascalCase
+dotnet_naming_rule.constants_pascal_case.symbols = constants
+dotnet_naming_rule.constants_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_pascal_case.severity = warning # Important for consistent usage
+
+# Static Readonly fields should be PascalCase
+dotnet_naming_rule.static_readonly_fields_pascal_case.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_fields_pascal_case.style = pascal_case
+dotnet_naming_rule.static_readonly_fields_pascal_case.severity = suggestion # Standard convention
+
+# Enum members should be PascalCase
+dotnet_naming_rule.enum_members_pascal_case.symbols = enum_members
+dotnet_naming_rule.enum_members_pascal_case.style = pascal_case
+dotnet_naming_rule.enum_members_pascal_case.severity = warning # Important for clarity when using enums
+
+# Private fields should be _camelCase (Your existing rule)
+dotnet_naming_rule.private_fields_should_have_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_should_have_underscore.style = camel_case_with_underscore
+dotnet_naming_rule.private_fields_should_have_underscore.severity = suggestion
+
+
+#------------------------------------------------------------------
+# CODE CLEANUP (For automation)
+#------------------------------------------------------------------
+
+# (Keep your existing code cleanup rules)
+dotnet_diagnostic.IDE0005.severity = suggestion  # Remove unnecessary usings
+dotnet_diagnostic.IDE0063.severity = suggestion  # 'using' statement can be simplified
+dotnet_diagnostic.IDE0051.severity = suggestion  # Remove unread private members
+dotnet_diagnostic.IDE0052.severity = suggestion  # Remove unread private members
+dotnet_diagnostic.IDE0004.severity = suggestion  # Remove unnecessary cast
+# IDE1006 is the primary diagnostic ID for naming rule violations.
+# While the rules above define their severity, adding it here ensures cleanup can fix them.
+dotnet_diagnostic.IDE1006.severity = suggestion # General naming violations

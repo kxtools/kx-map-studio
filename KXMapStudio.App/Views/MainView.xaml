@@ -1,0 +1,308 @@
+﻿<Window x:Class="KXMapStudio.App.Views.MainView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KXMapStudio.App"
+        xmlns:views="clr-namespace:KXMapStudio.App.Views"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:b="clr-namespace:KXMapStudio.App.Behaviors"
+        xmlns:converters="clr-namespace:KXMapStudio.App.Converters"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:core="clr-namespace:KXMapStudio.Core;assembly=KXMapStudio.Core"
+        xmlns:actions="clr-namespace:KXMapStudio.App.Actions"
+        xmlns:utilities="clr-namespace:KXMapStudio.App.Utilities"
+        mc:Ignorable="d"
+        Title="{Binding Title, Mode=OneWay}" 
+        Height="600" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        Style="{StaticResource MaterialDesignWindow}"
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+        Background="{DynamicResource MaterialDesign.Brush.Background}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="14"
+        FontFamily="{materialDesign:MaterialDesignFont}"
+        Icon="pack://application:,,,/KXMapStudio.ico">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <converters:BooleanToVisibilityInverterConverter x:Key="BooleanToVisibilityInverterConverter" />
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveDocumentCommand}" />
+        <KeyBinding Modifiers="Alt" Key="Up" Command="{Binding MoveSelectedMarkersUpCommand}" />
+        <KeyBinding Modifiers="Alt" Key="Down" Command="{Binding MoveSelectedMarkersDownCommand}" />
+    </Window.InputBindings>
+
+    <materialDesign:DialogHost IsOpen="{Binding PackState.IsLoading}" DialogTheme="Inherit" CloseOnClickAway="False">
+        <materialDesign:DialogHost.DialogContent>
+            <StackPanel Margin="16">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" IsIndeterminate="True" Value="0" Margin="0 0 0 8"/>
+                <TextBlock Text="Loading Workspace..."/>
+            </StackPanel>
+        </materialDesign:DialogHost.DialogContent>
+
+        <DockPanel>
+            <Menu DockPanel.Dock="Top" materialDesign:MenuAssist.TopLevelMenuItemHeight="40">
+                <MenuItem Header="_File">
+                    <MenuItem Header="_New File" Command="{Binding NewFileCommand}" />
+                    <Separator />
+                    <MenuItem Header="_Open File..." Command="{Binding OpenFileCommand}"/>
+                    <MenuItem Header="Open F_older..." Command="{Binding OpenFolderCommand}"/>
+                    <MenuItem Header="_Close Workspace" Command="{Binding CloseWorkspaceCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="_Save" Command="{Binding SaveDocumentCommand}" InputGestureText="Ctrl+S"/>
+                    <MenuItem Header="Save _As..." Command="{Binding SaveAsCommand}" />
+                </MenuItem>
+                <MenuItem Header="_Edit">
+                    <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z"/>
+                    <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y"/>
+                    <Separator/>
+                    <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up" />
+                    <MenuItem Header="Move Down" Command="{Binding MoveSelectedMarkersDownCommand}" InputGestureText="Alt+Down" />
+                </MenuItem>
+
+                <MenuItem Header="_Hotkeys">
+                    <MenuItem Header="Add Marker From Game" 
+                              InputGestureText="{Binding GlobalHotkeys.AddMarkerHotkeyText}" 
+                              Command="{Binding AddMarkerFromGameCommand}" />
+                    <MenuItem Header="Undo Last Added Marker" 
+                              InputGestureText="{Binding GlobalHotkeys.UndoLastAddHotkeyText}"
+                              Command="{Binding UndoCommand}"
+                              CommandParameter="{x:Static actions:ActionType.AddMarker}"/>
+                    <Separator/>
+                    <MenuItem Header="Note: Hotkeys are configured in hotkeys.json" IsEnabled="False" />
+                </MenuItem>
+
+                <MenuItem Header="_Help">
+                    <MenuItem Header="Visit kxtools.xyz" Command="{Binding OpenKxToolsWebsiteCommand}" >
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="Web" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Join our Discord" Command="{Binding OpenDiscordLinkCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="Web" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Project GitHub" Command="{Binding OpenGitHubLinkCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="Github" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="{Binding AppVersion}" IsEnabled="False" />
+                </MenuItem>
+            </Menu>
+
+            <Grid DockPanel.Dock="Bottom" Background="{DynamicResource MaterialDesign.Brush.Surface}" Height="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding AppVersion}"
+                           Style="{StaticResource MaterialDesignBody2TextBlock}"
+                           Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}"
+                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0">
+                    <TextBlock Text="{x:Static utilities:Constants.KxToolsSlogan}"
+                               Style="{StaticResource MaterialDesignBody2TextBlock}"
+                               Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}"
+                               VerticalAlignment="Center" Margin="0,0,16,0"/>
+
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            Command="{Binding OpenKxToolsWebsiteCommand}"
+                            ToolTip="Visit kxtools.xyz" Padding="4">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Web" VerticalAlignment="Center" Width="16" Height="16" />
+                            <TextBlock Text="kxtools.xyz" Margin="4,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            Command="{Binding OpenDiscordLinkCommand}"
+                            ToolTip="Join our Discord community" Padding="4">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Web" VerticalAlignment="Center" Width="16" Height="16" />
+                            <TextBlock Text="Discord" Margin="4,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            Command="{Binding OpenGitHubLinkCommand}"
+                            ToolTip="View Project on GitHub" Padding="4">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Github" VerticalAlignment="Center" Width="16" Height="16" />
+                            <TextBlock Text="GitHub" Margin="4,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <Grid>
+                <Grid Visibility="{Binding PackState.IsWorkspaceLoaded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250" MinWidth="180"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="280" MinWidth="220"/>
+                    </Grid.ColumnDefinitions>
+
+                    <materialDesign:Card Grid.Column="0" Margin="5" Padding="0" UniformCornerRadius="4" VerticalAlignment="Stretch">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="Workspace" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="8,8,8,4"/>
+                            <ListBox ItemsSource="{Binding PackState.WorkspaceFiles}" 
+                                     SelectedItem="{Binding PackState.ActiveDocumentPath, Mode=TwoWay}" 
+                                     Style="{StaticResource MaterialDesignNavigationPrimaryListBox}" 
+                                     HorizontalContentAlignment="Stretch">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" ToolTip="{Binding}"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </materialDesign:Card>
+
+                    <GridSplitter Grid.Column="1" Width="5" VerticalAlignment="Stretch" HorizontalAlignment="Center" Style="{StaticResource MaterialDesignGridSplitter}" />
+
+                    <materialDesign:Card Grid.Column="2" Margin="5" Padding="0" UniformCornerRadius="4" VerticalAlignment="Stretch">
+                        <DataGrid ItemsSource="{Binding MarkersInView}" AutoGenerateColumns="False"
+                                  CanUserAddRows="False" IsReadOnly="False"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" SelectionMode="Extended"
+                                  materialDesign:DataGridAssist.CellPadding="12 4"
+                                  materialDesign:DataGridAssist.ColumnHeaderPadding="12 4"
+                                  CanUserSortColumns="False"
+                                  PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
+                                  PreviewKeyDown="DataGrid_PreviewKeyDown">
+                            <i:Interaction.Behaviors>
+                                <b:DataGridSelectedItemsBehavior SelectedItems="{Binding PackState.SelectedMarkers, Mode=TwoWay}"/>
+                            </i:Interaction.Behaviors>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Map ID" Binding="{Binding MapId, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
+                                <DataGridTextColumn Header="X" Binding="{Binding X, StringFormat=F3, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
+                                <DataGridTextColumn Header="Y" Binding="{Binding Y, StringFormat=F3, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
+                                <DataGridTextColumn Header="Z" Binding="{Binding Z, StringFormat=F3, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
+                                <DataGridTextColumn Header="Type" Binding="{Binding Type, Mode=TwoWay}" Width="*" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
+                            </DataGrid.Columns>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up" />
+                                    <MenuItem Header="Move Down" Command="{Binding MoveSelectedMarkersDownCommand}" InputGestureText="Alt+Down" />
+                                    <Separator/>
+                                    <MenuItem Header="Copy GUID" Command="{Binding CopySelectedMarkerGuidCommand}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Delete Selected Marker(s)" Command="{Binding DeleteSelectedMarkersCommand}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                        </DataGrid>
+                    </materialDesign:Card>
+
+                    <GridSplitter Grid.Column="3" Width="5" VerticalAlignment="Stretch" HorizontalAlignment="Center" Style="{StaticResource MaterialDesignGridSplitter}" />
+
+                    <materialDesign:Card Grid.Column="4" Margin="5" UniformCornerRadius="4" VerticalAlignment="Stretch">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <Button Command="{Binding AddMarkerFromGameCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="8" ToolTip="{Binding GlobalHotkeys.AddMarkerHotkeyText, StringFormat='Add Marker From Game ({0})'}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="MapMarkerPlus" Margin="0 0 8 0"/>
+                                        <TextBlock Text="Add Marker From Game"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding UndoCommand}" CommandParameter="{x:Static actions:ActionType.AddMarker}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="8,0,8,8" ToolTip="{Binding GlobalHotkeys.UndoLastAddHotkeyText, StringFormat='Undo Last Added Marker ({0})'}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Undo" Margin="0 0 8 0"/>
+                                        <TextBlock Text="Undo Last Added Marker"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Expander Header="Live Game Data" Margin="8,0,8,8">
+                                    <views:LiveDataView DataContext="{Binding}"/>
+                                </Expander>
+
+                                <Expander Header="Marker Properties" IsExpanded="True" Margin="8,0,8,8">
+                                    <views:PropertyEditorView DataContext="{Binding PropertyEditorViewModel}"/>
+                                </Expander>
+
+                                <Expander Header="Categories" IsExpanded="False" Margin="8,0,8,8">
+                                    <TreeView ItemsSource="{Binding PackState.ActiveRootCategory.SubCategories}" MinHeight="150">
+                                        <TreeView.Resources>
+                                            <HierarchicalDataTemplate DataType="{x:Type core:Category}" ItemsSource="{Binding SubCategories}">
+                                                <TextBlock Text="{Binding DisplayName}" />
+                                            </HierarchicalDataTemplate>
+                                        </TreeView.Resources>
+                                        <TreeView.ItemContainerStyle>
+                                            <Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
+                                                <Setter Property="Padding" Value="8 2" />
+                                            </Style>
+                                        </TreeView.ItemContainerStyle>
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="SelectedItemChanged">
+                                                <i:InvokeCommandAction Command="{Binding SelectCategoryCommand}" PassEventArgsToCommand="True" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                    </TreeView>
+                                </Expander>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </materialDesign:Card>
+                </Grid>
+
+                <Grid Visibility="{Binding PackState.IsWorkspaceLoaded, Converter={StaticResource BooleanToVisibilityInverterConverter}}" Background="{DynamicResource MaterialDesign.Brush.Background}">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="FolderOpenOutline" Width="64" Height="64" Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}" Margin="0,0,0,16" HorizontalAlignment="Center" />
+                        <TextBlock Style="{StaticResource MaterialDesignHeadline5TextBlock}" Text="No Workspace Loaded" HorizontalAlignment="Center" />
+                        <TextBlock Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}" Margin="0,8,0,0" HorizontalAlignment="Center" TextAlignment="Center">
+                            Select <Bold>File > New File</Bold>, <Bold>Open Folder...</Bold> or <Bold>Open File...</Bold> to get started.
+                        </TextBlock>
+
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,30,0,0">
+                            <TextBlock Text="{x:Static utilities:Constants.KxToolsSlogan}"
+                                       Style="{StaticResource MaterialDesignSubtitle2TextBlock}"
+                                       Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Command="{Binding OpenKxToolsWebsiteCommand}"
+                                        ToolTip="Visit kxtools.xyz" Margin="0,0,8,0" Padding="8 4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Web" VerticalAlignment="Center" Width="20" Height="20" />
+                                        <TextBlock Text="kxtools.xyz" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Command="{Binding OpenDiscordLinkCommand}"
+                                        ToolTip="Join our Discord community" Margin="0,0,8,0" Padding="8 4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Web" VerticalAlignment="Center" Width="20" Height="20" />
+                                        <TextBlock Text="Discord" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Command="{Binding OpenGitHubLinkCommand}"
+                                        ToolTip="View Project on GitHub" Padding="8 4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Github" VerticalAlignment="Center" Width="20" Height="20" />
+                                        <TextBlock Text="GitHub" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+
+                    </StackPanel>
+                </Grid>
+                <materialDesign:Snackbar x:Name="MainSnackbar" HorizontalAlignment="Center" VerticalAlignment="Bottom" MaxWidth="568" Margin="10"/>
+            </Grid>
+        </DockPanel>
+    </materialDesign:DialogHost>
+</Window>
