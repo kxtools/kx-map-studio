@@ -12,6 +12,8 @@ namespace KXMapStudio.Core
 
         public required Dictionary<string, List<Marker>> MarkersByFile { get; init; }
 
+        public Dictionary<string, List<XElement>> UnmanagedPois { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public HashSet<Marker> AddedMarkers { get; } = new();
         public HashSet<Marker> DeletedMarkers { get; } = new();
 

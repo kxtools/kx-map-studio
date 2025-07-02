@@ -130,7 +130,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public async Task SaveActiveDocumentAsync()
     {
-        if (ActiveDocumentPath == null || _workspacePack == null)
+        if (ActiveDocumentPath == null || _workspacePack == null || WorkspacePath == null)
         {
             return;
         }
@@ -146,7 +146,19 @@ public partial class PackStateService : ObservableObject, IPackStateService
             return;
         }
 
-        await WriteActiveDocumentToPath(WorkspacePath!, ActiveDocumentPath);
+        string fullSavePath;
+
+        // This check correctly handles both "Open Folder" and "Open File" scenarios.
+        if (Directory.Exists(WorkspacePath))
+        {
+            fullSavePath = Path.Combine(WorkspacePath, ActiveDocumentPath);
+        }
+        else
+        {
+            fullSavePath = WorkspacePath;
+        }
+
+        await WriteActiveDocumentToPath(fullSavePath, ActiveDocumentPath);
     }
 
     public async Task SaveActiveDocumentAsAsync()
@@ -364,7 +376,8 @@ public partial class PackStateService : ObservableObject, IPackStateService
         _logger.LogInformation("Saving document {docKey} to disk path {path}", sourceKeyForWorkspace, saveDiskPath);
         try
         {
-            _packWriterService.RewritePoisSection(docToSave, ActiveDocumentMarkers);
+            _workspacePack.UnmanagedPois.TryGetValue(sourceKeyForWorkspace, out var unmanagedElements);
+            _packWriterService.RewritePoisSection(docToSave, ActiveDocumentMarkers, unmanagedElements ?? Enumerable.Empty<XElement>());
 
             var tempPath = Path.GetTempFileName();
             await using (var writer = File.CreateText(tempPath))

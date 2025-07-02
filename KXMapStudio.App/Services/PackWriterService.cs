@@ -8,24 +8,36 @@ namespace KXMapStudio.App.Services;
 public class PackWriterService
 {
     /// <summary>
-    /// Rewrites the POIs section of an XML document with a new set of markers.
+    /// Rewrites the POIs section of an XML document with a new set of markers,
+    /// preserving any unmanaged elements like trails.
     /// </summary>
     /// <param name="doc">The XML document to modify.</param>
     /// <param name="markersInOrder">The ordered list of markers to write.</param>
-    public void RewritePoisSection(XDocument doc, IEnumerable<Marker> markersInOrder)
+    /// <param name="unmanagedElements">A list of other elements (e.g. trails) to preserve.</param>
+    public void RewritePoisSection(XDocument doc, IEnumerable<Marker> markersInOrder, IEnumerable<XElement> unmanagedElements)
     {
         var overlayData = doc.Element(TacoXmlConstants.OverlayDataElement);
         if (overlayData == null)
         {
-            overlayData = new XElement(TacoXmlConstants.OverlayDataElement);
-            doc.Add(overlayData);
+            // If the root is lowercase, find it that way.
+            overlayData = doc.Elements().FirstOrDefault(e => e.Name.LocalName.Equals(TacoXmlConstants.OverlayDataElement, StringComparison.OrdinalIgnoreCase));
+            if (overlayData == null)
+            {
+                overlayData = new XElement(TacoXmlConstants.OverlayDataElement);
+                doc.Add(overlayData);
+            }
         }
 
         var poisNode = overlayData.Element(TacoXmlConstants.PoisElement);
         if (poisNode == null)
         {
-            poisNode = new XElement(TacoXmlConstants.PoisElement);
-            overlayData.Add(poisNode);
+            // Case-insensitive search
+            poisNode = overlayData.Elements().FirstOrDefault(e => e.Name.LocalName.Equals(TacoXmlConstants.PoisElement, StringComparison.OrdinalIgnoreCase));
+            if (poisNode == null)
+            {
+                poisNode = new XElement(TacoXmlConstants.PoisElement);
+                overlayData.Add(poisNode);
+            }
         }
 
         poisNode.RemoveNodes();
@@ -33,9 +45,9 @@ public class PackWriterService
         string parentIndent = (poisNode.PreviousNode as XText)?.Value ?? "\n  ";
         string childIndent = parentIndent.Contains('\n') ? parentIndent + "  " : "  ";
 
+        // First, write all the markers we manage.
         foreach (var marker in markersInOrder)
         {
-            // Create the element and add attributes in a consistent order for clean output.
             var newPoiElement = new XElement(TacoXmlConstants.PoiElement);
 
             newPoiElement.Add(new XAttribute(TacoXmlConstants.MapIdAttribute, marker.MapId.ToString()));
@@ -53,7 +65,14 @@ public class PackWriterService
             poisNode.Add(new XText(childIndent), newPoiElement);
         }
 
-        if (markersInOrder.Any())
+        // Next, write back all the unmanaged elements we preserved.
+        foreach (var unmanagedElement in unmanagedElements)
+        {
+            // Add a copy of the element to avoid any shared object issues.
+            poisNode.Add(new XText(childIndent), new XElement(unmanagedElement));
+        }
+
+        if (markersInOrder.Any() || unmanagedElements.Any())
         {
             poisNode.Add(new XText(parentIndent));
         }

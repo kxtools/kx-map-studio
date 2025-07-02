@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Xml.Linq;
 
 using KXMapStudio.Core;
+using KXMapStudio.Core.Utilities;
 
 namespace KXMapStudio.App.Services;
 
@@ -54,8 +55,18 @@ public class PackService
 
         var xmlDocuments = new Dictionary<string, XDocument>(StringComparer.OrdinalIgnoreCase);
         var errors = new List<PackLoadError>();
-
         var markersByFile = new Dictionary<string, List<Marker>>(StringComparer.OrdinalIgnoreCase);
+
+        var loadedPack = new LoadedMarkerPack
+        {
+            FilePath = path,
+            RootCategory = new Category { InternalName = "root", DisplayName = Path.GetFileNameWithoutExtension(path) },
+            OriginalRawContent = originalRawContent,
+            XmlDocuments = xmlDocuments,
+            MarkersByFile = markersByFile
+        };
+        var result = new PackLoadResult { LoadedPack = loadedPack };
+        result.Errors.AddRange(errors);
 
         foreach (var fileEntry in originalRawContent.Where(kvp => kvp.Key.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)))
         {
@@ -64,20 +75,38 @@ public class PackService
                 var markersForThisFile = new List<Marker>();
                 markersByFile[fileEntry.Key] = markersForThisFile;
 
+                var unmanagedElementsForThisFile = new List<XElement>();
+                loadedPack.UnmanagedPois[fileEntry.Key] = unmanagedElementsForThisFile;
+
                 using var stream = new MemoryStream(fileEntry.Value);
                 using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
                 var doc = await XDocument.LoadAsync(reader, LoadOptions.PreserveWhitespace, CancellationToken.None);
                 xmlDocuments[fileEntry.Key] = doc;
 
-                var poisNode = doc.Descendants(TacoXmlConstants.PoisElement).FirstOrDefault();
+                var poisNode = doc.Descendants()
+                                  .FirstOrDefault(e => e.Name.LocalName.Equals(TacoXmlConstants.PoisElement, StringComparison.OrdinalIgnoreCase));
+
                 if (poisNode != null)
                 {
-                    foreach (var poiNode in poisNode.Elements(TacoXmlConstants.PoiElement))
+                    foreach (var element in poisNode.Elements())
                     {
-                        var marker = CreateMarkerFromNode(poiNode, fileEntry.Key);
-                        if (marker != null)
+                        if (element.Name.LocalName.Equals(TacoXmlConstants.PoiElement, StringComparison.OrdinalIgnoreCase))
                         {
-                            markersForThisFile.Add(marker);
+                            var marker = CreateMarkerFromNode(element, fileEntry.Key);
+                            if (marker != null)
+                            {
+                                markersForThisFile.Add(marker);
+                            }
+                            else
+                            {
+                                // It was called POI but was malformed, preserve it.
+                                unmanagedElementsForThisFile.Add(element);
+                            }
+                        }
+                        else
+                        {
+                            // It's a <trail> or something else we don't manage.
+                            unmanagedElementsForThisFile.Add(element);
                         }
                     }
                 }
@@ -88,12 +117,12 @@ public class PackService
             }
         }
 
-        var rootCategory = new Category { InternalName = "root", DisplayName = Path.GetFileNameWithoutExtension(path) };
+        var rootCategory = loadedPack.RootCategory;
 
-        // Build the category tree from all loaded XML documents.
         foreach (var docEntry in xmlDocuments)
         {
-            var overlayData = docEntry.Value.Element(TacoXmlConstants.OverlayDataElement);
+            var overlayData = docEntry.Value.Elements()
+                                      .FirstOrDefault(e => e.Name.LocalName.Equals(TacoXmlConstants.OverlayDataElement, StringComparison.OrdinalIgnoreCase));
             if (overlayData == null)
             {
                 continue;
@@ -105,7 +134,6 @@ public class PackService
             }
         }
 
-        // Assign markers to their respective categories.
         foreach (var fileMarkers in markersByFile.Values)
         {
             foreach (var marker in fileMarkers)
@@ -116,23 +144,12 @@ public class PackService
             }
         }
 
-        var loadedPack = new LoadedMarkerPack
-        {
-            FilePath = path,
-            RootCategory = rootCategory,
-            OriginalRawContent = originalRawContent,
-            XmlDocuments = xmlDocuments,
-            MarkersByFile = markersByFile
-        };
-
-        var result = new PackLoadResult { LoadedPack = loadedPack };
-        result.Errors.AddRange(errors);
         return result;
     }
 
     private Marker? CreateMarkerFromNode(XElement poiNode, string sourceFile)
     {
-        var guidString = poiNode.Attribute(TacoXmlConstants.GuidAttribute)?.Value;
+        var guidString = poiNode.AttributeIgnoreCase(TacoXmlConstants.GuidAttribute)?.Value;
         Guid markerGuid = Guid.Empty;
         if (!string.IsNullOrEmpty(guidString))
         {
@@ -144,18 +161,27 @@ public class PackService
             markerGuid = Guid.NewGuid();
         }
 
+        // A POI must have coordinates. If not, we can't manage it.
+        var xPosAttr = poiNode.AttributeIgnoreCase(TacoXmlConstants.XPosAttribute);
+        var yPosAttr = poiNode.AttributeIgnoreCase(TacoXmlConstants.YPosAttribute);
+        if (xPosAttr == null || yPosAttr == null)
+        {
+            return null; // Not a valid POI for our purposes.
+        }
+
         return new Marker
         {
             Guid = markerGuid,
-            MapId = int.TryParse(poiNode.Attribute(TacoXmlConstants.MapIdAttribute)?.Value, out var mid) ? mid : 0,
-            X = double.TryParse(poiNode.Attribute(TacoXmlConstants.XPosAttribute)?.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0,
-            Y = double.TryParse(poiNode.Attribute(TacoXmlConstants.YPosAttribute)?.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var y) ? y : 0,
-            Z = double.TryParse(poiNode.Attribute(TacoXmlConstants.ZPosAttribute)?.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var z) ? z : 0,
-            Type = poiNode.Attribute(TacoXmlConstants.TypeAttribute)?.Value ?? string.Empty,
+            MapId = int.TryParse(poiNode.AttributeIgnoreCase(TacoXmlConstants.MapIdAttribute)?.Value, out var mid) ? mid : 0,
+            X = double.TryParse(xPosAttr.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0,
+            Y = double.TryParse(yPosAttr.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var y) ? y : 0,
+            Z = double.TryParse(poiNode.AttributeIgnoreCase(TacoXmlConstants.ZPosAttribute)?.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var z) ? z : 0,
+            Type = poiNode.AttributeIgnoreCase(TacoXmlConstants.TypeAttribute)?.Value ?? string.Empty,
             SourceFile = sourceFile,
             IsDirty = false
         };
     }
+
     private void MergeCategoryRecursive(XElement categoryNode, Category parent, string sourceFile)
     {
         var internalName = categoryNode.Attribute(TacoXmlConstants.NameAttribute)?.Value ?? string.Empty;
@@ -180,6 +206,7 @@ public class PackService
             MergeCategoryRecursive(subNode, ourCategory, sourceFile);
         }
     }
+
     private Category FindOrCreateCategoryByNamespace(Category root, string fullNamespace)
     {
         if (string.IsNullOrEmpty(fullNamespace))
