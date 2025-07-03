@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using KXMapStudio.App.Actions;
 using KXMapStudio.App.Services;
+using KXMapStudio.App.Services.Pack;
 using KXMapStudio.Core;
 
 using Microsoft.Extensions.Logging;
@@ -58,17 +59,22 @@ public partial class PackStateService : ObservableObject, IPackStateService
     private bool _isLoading;
 
     public bool HasUnsavedChanges => _workspacePack?.GetUnsavedDocumentPaths().Any() ?? false;
+    public bool IsActiveDocumentDirty => _workspacePack?.HasUnsavedChangesFor(ActiveDocumentPath) ?? false;
+
+    private readonly IFeedbackService _feedbackService;
 
     public PackStateService(
         MumbleService mumbleService,
         HistoryService historyService,
         ILogger<PackStateService> logger,
-        WorkspaceManager workspaceManager)
+        WorkspaceManager workspaceManager,
+        IFeedbackService feedbackService)
     {
         _mumbleService = mumbleService;
         _historyService = historyService;
         _logger = logger;
         _workspaceManager = workspaceManager;
+        _feedbackService = feedbackService;
     }
 
     #region Marker Orchestration
@@ -186,17 +192,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
                 case MessageBoxResult.No:
                     if (_workspacePack != null)
                     {
-                        _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(path, StringComparison.OrdinalIgnoreCase));
-                        _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(path, StringComparison.OrdinalIgnoreCase));
-                        if (_workspacePack.MarkersByFile.TryGetValue(path, out var markers))
-                        {
-                            foreach (var marker in markers)
-                            {
-                                marker.IsDirty = false;
-                            }
-                        }
+                        RevertDocumentChanges(path);
                     }
                     OnPropertyChanged(nameof(HasUnsavedChanges));
+                    OnPropertyChanged(nameof(IsActiveDocumentDirty));
                     continue;
                 case MessageBoxResult.Cancel:
                 default:
@@ -276,7 +275,9 @@ public partial class PackStateService : ObservableObject, IPackStateService
             }
 
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(IsActiveDocumentDirty));
             _historyService.Clear();
+            _feedbackService.ShowMessage("A copy was saved successfully. You are still working in the original workspace.");
         }
     }
 
@@ -313,6 +314,30 @@ public partial class PackStateService : ObservableObject, IPackStateService
     #endregion
 
     #region Private Helpers
+
+    private void RevertDocumentChanges(string documentPath)
+    {
+        if (_workspacePack == null || !_workspacePack.OriginalRawContent.TryGetValue(documentPath, out var originalBytes))
+        {
+            return;
+        }
+
+        _workspacePack.MarkersByFile.Remove(documentPath);
+        _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(documentPath, StringComparison.OrdinalIgnoreCase));
+        _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(documentPath, StringComparison.OrdinalIgnoreCase));
+
+        var packLoader = new PackLoader();
+        var result = packLoader.LoadPackFromMemoryAsync(new Dictionary<string, byte[]> { { documentPath, originalBytes } }, _workspacePack.FilePath, _workspacePack.IsArchive).Result;
+
+        if (result.LoadedPack != null && result.LoadedPack.MarkersByFile.TryGetValue(documentPath, out var revertedMarkers))
+        {
+            _workspacePack.MarkersByFile[documentPath] = revertedMarkers;
+        }
+
+        LoadActiveDocumentIntoView();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
+    }
 
     private void SetAndLoadDocument(string? newPath)
     {

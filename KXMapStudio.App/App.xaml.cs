@@ -11,6 +11,7 @@ using MaterialDesignThemes.Wpf;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 using Serilog;
 
@@ -51,7 +52,13 @@ namespace KXMapStudio.App
                     services.AddSingleton<PackLoaderFactory>();
                     services.AddSingleton<WorkspaceManager>();
 
-                    services.AddSingleton<IPackStateService, PackStateService>();
+                    services.AddSingleton<IPackStateService, PackStateService>(sp =>
+                        new PackStateService(
+                            sp.GetRequiredService<MumbleService>(),
+                            sp.GetRequiredService<HistoryService>(),
+                            sp.GetRequiredService<ILogger<PackStateService>>(),
+                            sp.GetRequiredService<WorkspaceManager>(),
+                            sp.GetRequiredService<IFeedbackService>()));
                 })
                 .Build();
         }

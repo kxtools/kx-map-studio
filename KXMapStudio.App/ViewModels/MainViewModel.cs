@@ -120,13 +120,13 @@ public partial class MainViewModel : ObservableObject
                 return "KX Map Studio";
             }
 
-            var unsavedIndicator = PackState.HasUnsavedChanges ? "*" : "";
+            var unsavedIndicator = PackState.IsActiveDocumentDirty ? "*" : "";
             var documentName = Path.GetFileName(PackState.ActiveDocumentPath);
 
             if (PackState.IsWorkspaceArchive)
             {
                 var archiveName = Path.GetFileName(PackState.WorkspacePath);
-                return $"{documentName}{unsavedIndicator} (in {archiveName}) - KX Map Studio";
+                return $"{documentName}{unsavedIndicator} (in {archiveName}) [Read-Only] - KX Map Studio";
             }
 
             return $"{documentName}{unsavedIndicator} - KX Map Studio";
