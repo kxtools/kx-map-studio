@@ -309,8 +309,25 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void AddMarkerFromGame() => PackState.AddMarkerFromGame();
-    private void DeleteSelectedMarkers() => PackState.DeleteSelectedMarkers();
+    private void AddMarkerFromGame()
+    {
+        PackState.AddMarkerFromGame();
+        // After adding, we should select the new marker for good UX.
+        // The last marker in the list is the one just added.
+        if (PackState.ActiveDocumentMarkers.Any())
+        {
+            var newMarker = PackState.ActiveDocumentMarkers.Last();
+            PackState.SelectedMarkers.Clear();
+            PackState.SelectedMarkers.Add(newMarker);
+        }
+    }
+
+    // This command is called by the "Delete" context menu item
+    private void DeleteSelectedMarkers()
+    {
+        PackState.DeleteSelectedMarkers();
+    }
+
 
     private void CopySelectedMarkerGuid()
     {
@@ -467,31 +484,30 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // Determine the insertion index. Default to 0 if nothing is selected.
         int insertionIndex = 0;
         Marker? selectedMarker = null;
 
+        // Use the master list from the service for all index calculations.
         var markersForFile = PackState.WorkspacePack.MarkersByFile[PackState.ActiveDocumentPath];
 
-        if (MarkersInView.Any() && PackState.SelectedMarkers.Any())
+        if (markersForFile.Any() && PackState.SelectedMarkers.Any())
         {
-            // Find the topmost selected marker in the current view
+            // Find the topmost selected marker.
             selectedMarker = PackState.SelectedMarkers
-                .OrderBy(m => MarkersInView.IndexOf(m))
+                .OrderBy(m => markersForFile.IndexOf(m))
                 .FirstOrDefault();
 
             if (selectedMarker != null)
             {
-                // We need the index from the master list, not the filtered view list
                 insertionIndex = markersForFile.IndexOf(selectedMarker);
-                if (insertionIndex == -1) // Fallback if not found (shouldn't happen)
+                if (insertionIndex == -1) // Fallback just in case.
                 {
                     insertionIndex = 0;
                 }
             }
         }
 
-        // Create a new marker, using the selected marker's data as a default if available.
+        // Create a new marker, using the selected marker's data as a default.
         var newMarker = new Marker
         {
             Guid = Guid.NewGuid(),
@@ -504,12 +520,11 @@ public partial class MainViewModel : ObservableObject
         };
         newMarker.EnableChangeTracking();
 
-        // Use the unified AddMarkerAction, passing the specific insertionIndex
-        var action = new AddMarkerAction(PackState, PackState.WorkspacePack, newMarker, insertionIndex);
-        action.Execute();
-        _historyService.Record(action);
+        // *** THE FIX IS HERE: ***
+        // We must call the orchestration method on the PackState service.
+        PackState.InsertMarker(newMarker, insertionIndex);
 
-        // For good UX, clear the current selection and select the newly added marker.
+        // For good UX, clear the old selection and select the newly added marker.
         PackState.SelectedMarkers.Clear();
         PackState.SelectedMarkers.Add(newMarker);
     }

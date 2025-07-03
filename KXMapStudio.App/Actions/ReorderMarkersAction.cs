@@ -5,18 +5,12 @@ using KXMapStudio.Core;
 
 namespace KXMapStudio.App.Actions
 {
-    /// <summary>
-    /// Specifies the direction for a reorder operation.
-    /// </summary>
     public enum ReorderDirection
     {
         Up,
         Down
     }
 
-    /// <summary>
-    /// Represents an action that reorders markers in a collection.
-    /// </summary>
     public class ReorderMarkersAction : IAction
     {
         private readonly ObservableCollection<Marker> _collection;
@@ -32,20 +26,19 @@ namespace KXMapStudio.App.Actions
             _direction = direction;
         }
 
-        public void Execute()
+        public bool Execute()
         {
             PerformMove(_direction);
+            return true;
         }
 
-        public void Undo()
+        public bool Undo()
         {
             var undoDirection = _direction == ReorderDirection.Up ? ReorderDirection.Down : ReorderDirection.Up;
             PerformMove(undoDirection);
+            return true;
         }
 
-        /// <summary>
-        /// Moves the selected markers in the specified direction.
-        /// </summary>
         private void PerformMove(ReorderDirection direction)
         {
             if (direction == ReorderDirection.Up)

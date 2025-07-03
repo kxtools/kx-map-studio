@@ -7,8 +7,17 @@ namespace KXMapStudio.App.Services
     /// </summary>
     public interface IAction
     {
-        void Execute();
-        void Undo();
+        /// <summary>
+        /// Executes the action on the data model.
+        /// </summary>
+        /// <returns>True if the action was successful, otherwise false.</returns>
+        bool Execute();
+
+        /// <summary>
+        /// Reverts the action on the data model.
+        /// </summary>
+        /// <returns>True if the undo was successful, otherwise false.</returns>
+        bool Undo();
 
         ActionType Type { get; }
     }
