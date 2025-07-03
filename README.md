@@ -66,7 +66,6 @@ Our first early release focuses on providing a solid, user-friendly experience f
 2.  **Clone the Repository:**
     ```bash
     git clone https://github.com/kxtools/kx-map-studio.git
-    cd KXMapStudio
     ```
 3.  **Open in Visual Studio:** Open the `KXMapStudio.sln` file.
 4.  **Build:** Build the solution (Ctrl+Shift+B). The executable will be in the `bin` folder within the `KXMapStudio.App` project directory (e.g., `KXMapStudio.App\bin\Debug\`).
