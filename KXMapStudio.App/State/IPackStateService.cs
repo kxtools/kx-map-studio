@@ -7,9 +7,6 @@ namespace KXMapStudio.App.State;
 
 public interface IPackStateService : INotifyPropertyChanged
 {
-    event Action<Marker> MarkerAdded;
-    event Action<Marker> MarkerDeleted;
-
     LoadedMarkerPack? WorkspacePack { get; }
     string? WorkspacePath { get; }
     ObservableCollection<string> WorkspaceFiles { get; }
@@ -33,6 +30,8 @@ public interface IPackStateService : INotifyPropertyChanged
     Task NewFileAsync();
     Task SaveActiveDocumentAsAsync();
 
+    void InsertMarker(Marker newMarker, int insertionIndex);
     void AddMarkerFromGame();
-    void DeleteSelectedMarkers();
+
+    void DeleteMarkers(List<Marker> markersToDelete);
 }

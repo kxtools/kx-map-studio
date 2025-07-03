@@ -29,7 +29,6 @@ public partial class MainViewModel : ObservableObject
     private IAsyncRelayCommand _closeWorkspaceCommand = null!;
     private IAsyncRelayCommand _saveDocumentCommand = null!;
     private IRelayCommand _addMarkerFromGameCommand = null!;
-    private IRelayCommand _deleteSelectedMarkersCommand = null!;
     private IRelayCommand _copySelectedMarkerGuidCommand = null!;
     private IRelayCommand _undoCommand = null!;
     private IRelayCommand _redoCommand = null!;
@@ -49,7 +48,6 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand CloseWorkspaceCommand => _closeWorkspaceCommand;
     public IAsyncRelayCommand SaveDocumentCommand => _saveDocumentCommand;
     public IRelayCommand AddMarkerFromGameCommand => _addMarkerFromGameCommand;
-    public IRelayCommand DeleteSelectedMarkersCommand => _deleteSelectedMarkersCommand;
     public IRelayCommand CopySelectedMarkerGuidCommand => _copySelectedMarkerGuidCommand;
     public IRelayCommand UndoCommand => _undoCommand;
     public IRelayCommand RedoCommand => _redoCommand;
@@ -115,16 +113,19 @@ public partial class MainViewModel : ObservableObject
         _selectCategoryCommand = new RelayCommand<object>(HandleSelectCategory);
         _newFileCommand = new AsyncRelayCommand(PackState.NewFileAsync);
         _saveAsCommand = new AsyncRelayCommand(PackState.SaveActiveDocumentAsAsync, () => PackState.IsWorkspaceLoaded);
-        _moveSelectedMarkersUpCommand = new RelayCommand(MoveSelectedMarkersUp, CanMoveSelectedMarkersUp);
-        _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
-        _insertNewMarkerCommand = new RelayCommand(InsertNewMarker, () => PackState.ActiveDocumentPath != null);
+
+        _moveSelectedMarkersUpCommand = new RelayCommand(() => MoveMarkersUp(PackState.SelectedMarkers.ToList()), () => CanMoveSelectedMarkersUp());
+        _moveSelectedMarkersDownCommand = new RelayCommand(() => MoveMarkersDown(PackState.SelectedMarkers.ToList()), () => CanMoveSelectedMarkersDown());
+        _copySelectedMarkerGuidCommand = new RelayCommand(() => CopySelectedMarkerGuid(PackState.SelectedMarkers.ToList()), () => PackState.SelectedMarkers.Count == 1);
+
+        _insertNewMarkerCommand = new RelayCommand(
+            () => InsertNewMarker(PackState.SelectedMarkers.ToList()),
+            () => PackState.ActiveDocumentPath != null);
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
         _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges && !PackState.IsWorkspaceArchive);
         _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null && MumbleService.IsAvailable);
-        _deleteSelectedMarkersCommand = new RelayCommand(DeleteSelectedMarkers, () => PackState.SelectedMarkers.Any());
-        _copySelectedMarkerGuidCommand = new RelayCommand(CopySelectedMarkerGuid, () => PackState.SelectedMarkers.Count == 1);
         _undoCommand = new RelayCommand(_historyService.Undo, () => _historyService.CanUndo);
         _redoCommand = new RelayCommand(_historyService.Redo, () => _historyService.CanRedo);
 
@@ -147,6 +148,11 @@ public partial class MainViewModel : ObservableObject
     {
         _globalHotkeyService.AddMarkerHotkeyPressed += (s, e) => AddMarkerFromGameCommand.Execute(null);
         _globalHotkeyService.UndoLastAddHotkeyPressed += (s, e) => TryUndoLastAddMarker();
+    }
+
+    public void DeleteMarkers(List<Marker> markersToDelete)
+    {
+        PackState.DeleteMarkers(markersToDelete);
     }
 
     public string Title
@@ -202,7 +208,7 @@ public partial class MainViewModel : ObservableObject
 
     private void OnSelectedMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        DeleteSelectedMarkersCommand.NotifyCanExecuteChanged();
+        //DeleteSelectedMarkersCommand.NotifyCanExecuteChanged();
         CopySelectedMarkerGuidCommand.NotifyCanExecuteChanged();
         MoveSelectedMarkersUpCommand.NotifyCanExecuteChanged();
         MoveSelectedMarkersDownCommand.NotifyCanExecuteChanged();
@@ -231,7 +237,38 @@ public partial class MainViewModel : ObservableObject
 
     private void OnActiveDocumentMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        UpdateMarkersInView();
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            UpdateMarkersInView();
+        }
+
+        if (e.OldItems != null)
+        {
+            foreach (var item in e.OldItems.OfType<Marker>())
+            {
+                MarkersInView.Remove(item);
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            // Handle adding at a specific index if the event provides it.
+            if (e.NewStartingIndex > -1)
+            {
+                int index = e.NewStartingIndex;
+                foreach (var item in e.NewItems.OfType<Marker>())
+                {
+                    MarkersInView.Insert(index++, item);
+                }
+            }
+            else
+            {
+                foreach (var item in e.NewItems.OfType<Marker>())
+                {
+                    MarkersInView.Add(item);
+                }
+            }
+        }
     }
 
     private async Task OpenFolderAsync()
@@ -273,17 +310,30 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void AddMarkerFromGame() => PackState.AddMarkerFromGame();
-    private void DeleteSelectedMarkers() => PackState.DeleteSelectedMarkers();
-
-    private void CopySelectedMarkerGuid()
+    private void AddMarkerFromGame()
     {
-        if (PackState.SelectedMarkers.Count != 1)
+        PackState.AddMarkerFromGame();
+        Application.Current.Dispatcher.InvokeAsync(() =>
         {
+            if (PackState.ActiveDocumentMarkers.Any())
+            {
+                var newMarker = PackState.ActiveDocumentMarkers.Last();
+                PackState.SelectedMarkers.Clear();
+                PackState.SelectedMarkers.Add(newMarker);
+            }
+        }, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    public void CopySelectedMarkerGuid(List<Marker> selectedMarkers)
+    {
+        if (selectedMarkers.Count != 1)
+        {
+            // Maybe provide feedback that you can only copy one at a time.
+            _feedbackService.ShowMessage("Please select a single marker to copy its GUID.", "OK");
             return;
         }
 
-        var guid = PackState.SelectedMarkers.First().GuidFormatted;
+        var guid = selectedMarkers.First().GuidFormatted;
         Clipboard.SetText(guid);
         _feedbackService.ShowMessage($"Copied GUID: {guid}", "DISMISS");
     }
@@ -296,10 +346,10 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void MoveSelectedMarkersUp()
+    public void MoveMarkersUp(List<Marker> markersToMove)
     {
-        var selection = new List<Marker>(PackState.SelectedMarkers);
-        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, selection, ReorderDirection.Up);
+        // The action now receives the explicit list, not the potentially stale collection.
+        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Up);
         action.Execute();
         _historyService.Record(action);
     }
@@ -315,10 +365,9 @@ public partial class MainViewModel : ObservableObject
         return minIndex > 0;
     }
 
-    private void MoveSelectedMarkersDown()
+    public void MoveMarkersDown(List<Marker> markersToMove)
     {
-        var selection = new List<Marker>(PackState.SelectedMarkers);
-        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, selection, ReorderDirection.Down);
+        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Down);
         action.Execute();
         _historyService.Record(action);
     }
@@ -424,31 +473,32 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void InsertNewMarker()
+    public void InsertNewMarker(List<Marker> currentSelection)
     {
         if (PackState.WorkspacePack == null || PackState.ActiveDocumentPath == null)
         {
             return;
         }
 
-        // Determine the insertion index. Default to 0 if nothing is selected.
         int insertionIndex = 0;
         Marker? selectedMarker = null;
 
-        if (MarkersInView.Any() && PackState.SelectedMarkers.Any())
+        var markersForFile = PackState.WorkspacePack.MarkersByFile[PackState.ActiveDocumentPath];
+
+        if (markersForFile.Any() && currentSelection.Any())
         {
-            // Find the topmost selected marker in the current view
-            selectedMarker = PackState.SelectedMarkers
-                .OrderBy(m => MarkersInView.IndexOf(m))
+            // Find the topmost selected marker from the provided list.
+            selectedMarker = currentSelection
+                .OrderBy(m => markersForFile.IndexOf(m))
                 .FirstOrDefault();
 
             if (selectedMarker != null)
             {
-                insertionIndex = MarkersInView.IndexOf(selectedMarker);
+                insertionIndex = markersForFile.IndexOf(selectedMarker);
+                if (insertionIndex == -1) { insertionIndex = 0; }
             }
         }
 
-        // Create a new marker, using the selected marker's data as a default if available.
         var newMarker = new Marker
         {
             Guid = Guid.NewGuid(),
@@ -461,12 +511,12 @@ public partial class MainViewModel : ObservableObject
         };
         newMarker.EnableChangeTracking();
 
-        var action = new InsertMarkerAction(PackState, PackState.WorkspacePack, newMarker, insertionIndex);
-        action.Execute();
-        _historyService.Record(action);
+        PackState.InsertMarker(newMarker, insertionIndex);
 
-        // For good UX, clear the current selection and select the newly added marker.
-        PackState.SelectedMarkers.Clear();
-        PackState.SelectedMarkers.Add(newMarker);
+        Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            PackState.SelectedMarkers.Clear();
+            PackState.SelectedMarkers.Add(newMarker);
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 }
