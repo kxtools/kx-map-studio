@@ -30,7 +30,7 @@ public partial class MainViewModel
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
         _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges && !PackState.IsWorkspaceArchive);
         _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null && MumbleService.IsAvailable);
-        _undoCommand = new RelayCommand(_historyService.Undo, () => _historyService.CanUndo);
+        _undoCommand = new RelayCommand(UndoAction, () => _historyService.CanUndo);
         _redoCommand = new RelayCommand(_historyService.Redo, () => _historyService.CanRedo);
 
         _openLinkCommand = new RelayCommand<string>(OpenLink);
@@ -164,6 +164,13 @@ public partial class MainViewModel
         {
             _feedbackService.ShowMessage($"Could not open link: {ex.Message}", "OK");
         }
+    }
+
+    private void UndoAction()
+    {
+        _historyService.Undo();
+        PackState.LoadActiveDocumentIntoView();
+        _feedbackService.ShowMessage("Undo successful.");
     }
 
     [RelayCommand]

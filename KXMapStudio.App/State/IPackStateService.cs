@@ -35,4 +35,5 @@ public interface IPackStateService : INotifyPropertyChanged
     void AddMarkerFromGame();
 
     void DeleteMarkers(List<Marker> markersToDelete);
+    void LoadActiveDocumentIntoView();
 }

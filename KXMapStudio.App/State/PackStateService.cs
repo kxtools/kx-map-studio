@@ -382,7 +382,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
         }
     }
 
-    private void LoadActiveDocumentIntoView()
+    public void LoadActiveDocumentIntoView()
     {
         var selectedCategory = this.SelectedCategory;
         ActiveDocumentMarkers.Clear();
