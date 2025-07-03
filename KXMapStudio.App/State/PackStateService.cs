@@ -446,11 +446,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     private void SetAndLoadDocument(string? newPath)
     {
-        // This 'if' check is important to prevent re-entrancy and unnecessary work.
         if (SetProperty(ref _activeDocumentPath, newPath, nameof(ActiveDocumentPath)))
         {
             _logger.LogInformation("Activating document: {DocumentPath}", newPath);
-            LoadActiveDocumentIntoView();
+            LoadActiveDocumentIntoView(); // This will now correctly load markers and set the root.
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _historyService.Clear();
         }
@@ -460,14 +459,18 @@ public partial class PackStateService : ObservableObject, IPackStateService
     {
         SelectedMarkers.Clear();
         SelectedCategory = null;
-        ActiveRootCategory = null;
-        ActiveDocumentMarkers.Clear();
+        ActiveDocumentMarkers.Clear(); // Clearing this will trigger the update in MainViewModel
 
         if (ActiveDocumentPath == null || _workspacePack == null)
         {
+            ActiveRootCategory = null;
             return;
         }
 
+        // Set the one TRUE category tree for the UI to use.
+        ActiveRootCategory = _workspacePack.RootCategory;
+
+        // Populate ActiveDocumentMarkers from the source of truth
         if (_workspacePack.MarkersByFile.TryGetValue(ActiveDocumentPath, out var markersForThisDoc))
         {
             foreach (var marker in markersForThisDoc)
@@ -475,17 +478,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
                 ActiveDocumentMarkers.Add(marker);
             }
         }
-
-        var documentRoot = new Category { DisplayName = Path.GetFileName(ActiveDocumentPath) };
-        foreach (var marker in ActiveDocumentMarkers)
-        {
-            var destinationCategory = FindOrCreateDisplayCategory(documentRoot, marker.Type);
-            if (!destinationCategory.Markers.Contains(marker))
-            {
-                destinationCategory.Markers.Add(marker);
-            }
-        }
-        ActiveRootCategory = documentRoot;
     }
 
     private void ShowLoadPackErrors(PackLoadResult result)

@@ -144,9 +144,6 @@ public partial class MainViewModel : ObservableObject
         PackState.SelectedMarkers.CollectionChanged += OnSelectedMarkersChanged;
         _historyService.PropertyChanged += OnHistoryChanged;
         MumbleService.PropertyChanged += OnMumbleServiceChanged;
-
-        PackState.MarkerAdded += OnPackStateMarkerAdded;
-        PackState.MarkerDeleted += OnPackStateMarkerDeleted;
     }
 
     private void SetupHotkeys()
@@ -238,8 +235,39 @@ public partial class MainViewModel : ObservableObject
 
     private void OnActiveDocumentMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        UpdateMarkersInView();
-        SelectAllMarkersCommand.NotifyCanExecuteChanged();
+        // This method is now the single point of synchronization between the state and the view model's list.
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            UpdateMarkersInView();
+        }
+
+        if (e.OldItems != null)
+        {
+            foreach (var item in e.OldItems.OfType<Marker>())
+            {
+                MarkersInView.Remove(item);
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            // Handle adding at a specific index if the event provides it.
+            if (e.NewStartingIndex > -1)
+            {
+                int index = e.NewStartingIndex;
+                foreach (var item in e.NewItems.OfType<Marker>())
+                {
+                    MarkersInView.Insert(index++, item);
+                }
+            }
+            else
+            {
+                foreach (var item in e.NewItems.OfType<Marker>())
+                {
+                    MarkersInView.Add(item);
+                }
+            }
+        }
     }
 
     private async Task OpenFolderAsync()
@@ -443,6 +471,8 @@ public partial class MainViewModel : ObservableObject
         int insertionIndex = 0;
         Marker? selectedMarker = null;
 
+        var markersForFile = PackState.WorkspacePack.MarkersByFile[PackState.ActiveDocumentPath];
+
         if (MarkersInView.Any() && PackState.SelectedMarkers.Any())
         {
             // Find the topmost selected marker in the current view
@@ -452,7 +482,12 @@ public partial class MainViewModel : ObservableObject
 
             if (selectedMarker != null)
             {
-                insertionIndex = MarkersInView.IndexOf(selectedMarker);
+                // We need the index from the master list, not the filtered view list
+                insertionIndex = markersForFile.IndexOf(selectedMarker);
+                if (insertionIndex == -1) // Fallback if not found (shouldn't happen)
+                {
+                    insertionIndex = 0;
+                }
             }
         }
 
@@ -469,7 +504,8 @@ public partial class MainViewModel : ObservableObject
         };
         newMarker.EnableChangeTracking();
 
-        var action = new InsertMarkerAction(PackState, PackState.WorkspacePack, newMarker, insertionIndex);
+        // Use the unified AddMarkerAction, passing the specific insertionIndex
+        var action = new AddMarkerAction(PackState, PackState.WorkspacePack, newMarker, insertionIndex);
         action.Execute();
         _historyService.Record(action);
 
@@ -487,34 +523,6 @@ public partial class MainViewModel : ObservableObject
         foreach (var marker in MarkersInView)
         {
             PackState.SelectedMarkers.Add(marker);
-        }
-    }
-
-    private void OnPackStateMarkerAdded(Marker marker)
-    {
-        // If the added marker belongs in the current view (based on category), add it.
-        var selectedCategory = PackState.SelectedCategory;
-        if (selectedCategory == null)
-        {
-            // No category filter, so add it.
-            MarkersInView.Add(marker);
-        }
-        else
-        {
-            // Check if it matches the category filter.
-            if (marker.Type != null && marker.Type.StartsWith(selectedCategory.FullName, StringComparison.OrdinalIgnoreCase))
-            {
-                MarkersInView.Add(marker);
-            }
-        }
-    }
-
-    private void OnPackStateMarkerDeleted(Marker marker)
-    {
-        // If the deleted marker is in our view collection, remove it.
-        if (MarkersInView.Contains(marker))
-        {
-            MarkersInView.Remove(marker);
         }
     }
 
