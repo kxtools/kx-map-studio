@@ -218,7 +218,7 @@
                             </DataGrid.Columns>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Insert New Marker Here" Command="{Binding InsertNewMarkerCommand}" InputGestureText="Ctrl+I" />
+                                    <MenuItem Header="Insert New Marker Here" InputGestureText="Ctrl+I" Click="InsertMenuItem_Click" />
                                     <Separator/>
                                     <MenuItem Header="Select All" InputGestureText="Ctrl+A" Click="SelectAllMenuItem_Click" />
                                     <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up" />

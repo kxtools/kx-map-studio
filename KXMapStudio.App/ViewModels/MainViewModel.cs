@@ -115,7 +115,9 @@ public partial class MainViewModel : ObservableObject
         _saveAsCommand = new AsyncRelayCommand(PackState.SaveActiveDocumentAsAsync, () => PackState.IsWorkspaceLoaded);
         _moveSelectedMarkersUpCommand = new RelayCommand(MoveSelectedMarkersUp, CanMoveSelectedMarkersUp);
         _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
-        _insertNewMarkerCommand = new RelayCommand(InsertNewMarker, () => PackState.ActiveDocumentPath != null);
+        _insertNewMarkerCommand = new RelayCommand(
+            () => InsertNewMarker(PackState.SelectedMarkers.ToList()),
+            () => PackState.ActiveDocumentPath != null);
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
@@ -468,7 +470,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void InsertNewMarker()
+    public void InsertNewMarker(List<Marker> currentSelection)
     {
         if (PackState.WorkspacePack == null || PackState.ActiveDocumentPath == null)
         {
@@ -480,9 +482,10 @@ public partial class MainViewModel : ObservableObject
 
         var markersForFile = PackState.WorkspacePack.MarkersByFile[PackState.ActiveDocumentPath];
 
-        if (markersForFile.Any() && PackState.SelectedMarkers.Any())
+        if (markersForFile.Any() && currentSelection.Any())
         {
-            selectedMarker = PackState.SelectedMarkers
+            // Find the topmost selected marker from the provided list.
+            selectedMarker = currentSelection
                 .OrderBy(m => markersForFile.IndexOf(m))
                 .FirstOrDefault();
 
@@ -513,5 +516,4 @@ public partial class MainViewModel : ObservableObject
             PackState.SelectedMarkers.Add(newMarker);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
-
 }
