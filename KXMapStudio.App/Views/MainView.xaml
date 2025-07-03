@@ -37,6 +37,7 @@
         <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoCommand}" />
         <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveDocumentCommand}" />
         <KeyBinding Modifiers="Control" Key="I" Command="{Binding InsertNewMarkerCommand}" />
+        <KeyBinding Modifiers="Control" Key="A" Command="{x:Static DataGrid.SelectAllCommand}" CommandTarget="{Binding ElementName=MarkersDataGrid}" />
         <KeyBinding Modifiers="Alt" Key="Up" Command="{Binding MoveSelectedMarkersUpCommand}" />
         <KeyBinding Modifiers="Alt" Key="Down" Command="{Binding MoveSelectedMarkersDownCommand}" />
     </Window.InputBindings>
@@ -219,6 +220,7 @@
                                 <ContextMenu>
                                     <MenuItem Header="Insert New Marker Here" Command="{Binding InsertNewMarkerCommand}" InputGestureText="Ctrl+I" />
                                     <Separator/>
+                                    <MenuItem Header="Select All" InputGestureText="Ctrl+A" Click="SelectAllMenuItem_Click" />
                                     <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up" />
                                     <MenuItem Header="Move Down" Command="{Binding MoveSelectedMarkersDownCommand}" InputGestureText="Alt+Down" />
                                     <Separator/>

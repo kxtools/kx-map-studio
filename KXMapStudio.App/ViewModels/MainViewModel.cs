@@ -42,6 +42,7 @@ public partial class MainViewModel : ObservableObject
     private IRelayCommand _openGitHubLinkCommand = null!;
     private IRelayCommand<string> _openLinkCommand = null!;
     private IRelayCommand _insertNewMarkerCommand = null!;
+    private IRelayCommand _selectAllMarkersCommand = null!;
 
     public IRelayCommand SelectCategoryCommand => _selectCategoryCommand;
     public IAsyncRelayCommand OpenFolderCommand => _openFolderCommand;
@@ -62,6 +63,7 @@ public partial class MainViewModel : ObservableObject
     public IRelayCommand OpenGitHubLinkCommand => _openGitHubLinkCommand;
     public IRelayCommand<string> OpenLinkCommand => _openLinkCommand;
     public IRelayCommand InsertNewMarkerCommand => _insertNewMarkerCommand;
+    public IRelayCommand SelectAllMarkersCommand => _selectAllMarkersCommand;
 
     public IPackStateService PackState { get; }
     public MumbleService MumbleService { get; }
@@ -117,6 +119,7 @@ public partial class MainViewModel : ObservableObject
         _saveAsCommand = new AsyncRelayCommand(PackState.SaveActiveDocumentAsAsync, () => PackState.IsWorkspaceLoaded);
         _moveSelectedMarkersUpCommand = new RelayCommand(MoveSelectedMarkersUp, CanMoveSelectedMarkersUp);
         _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
+        _selectAllMarkersCommand = new RelayCommand(SelectAllMarkers, () => MarkersInView.Any());
         _insertNewMarkerCommand = new RelayCommand(InsertNewMarker, () => PackState.ActiveDocumentPath != null);
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
@@ -141,6 +144,9 @@ public partial class MainViewModel : ObservableObject
         PackState.SelectedMarkers.CollectionChanged += OnSelectedMarkersChanged;
         _historyService.PropertyChanged += OnHistoryChanged;
         MumbleService.PropertyChanged += OnMumbleServiceChanged;
+
+        PackState.MarkerAdded += OnPackStateMarkerAdded;
+        PackState.MarkerDeleted += OnPackStateMarkerDeleted;
     }
 
     private void SetupHotkeys()
@@ -196,6 +202,7 @@ public partial class MainViewModel : ObservableObject
                 break;
             case nameof(IPackStateService.SelectedCategory):
                 UpdateMarkersInView();
+                SelectAllMarkersCommand.NotifyCanExecuteChanged();
                 break;
         }
     }
@@ -232,6 +239,7 @@ public partial class MainViewModel : ObservableObject
     private void OnActiveDocumentMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         UpdateMarkersInView();
+        SelectAllMarkersCommand.NotifyCanExecuteChanged();
     }
 
     private async Task OpenFolderAsync()
@@ -469,4 +477,45 @@ public partial class MainViewModel : ObservableObject
         PackState.SelectedMarkers.Clear();
         PackState.SelectedMarkers.Add(newMarker);
     }
+
+    private void SelectAllMarkers()
+    {
+        // First, clear any existing selection to ensure a clean state.
+        PackState.SelectedMarkers.Clear();
+
+        // Add all markers that are currently visible in the DataGrid to the selection.
+        foreach (var marker in MarkersInView)
+        {
+            PackState.SelectedMarkers.Add(marker);
+        }
+    }
+
+    private void OnPackStateMarkerAdded(Marker marker)
+    {
+        // If the added marker belongs in the current view (based on category), add it.
+        var selectedCategory = PackState.SelectedCategory;
+        if (selectedCategory == null)
+        {
+            // No category filter, so add it.
+            MarkersInView.Add(marker);
+        }
+        else
+        {
+            // Check if it matches the category filter.
+            if (marker.Type != null && marker.Type.StartsWith(selectedCategory.FullName, StringComparison.OrdinalIgnoreCase))
+            {
+                MarkersInView.Add(marker);
+            }
+        }
+    }
+
+    private void OnPackStateMarkerDeleted(Marker marker)
+    {
+        // If the deleted marker is in our view collection, remove it.
+        if (MarkersInView.Contains(marker))
+        {
+            MarkersInView.Remove(marker);
+        }
+    }
+
 }

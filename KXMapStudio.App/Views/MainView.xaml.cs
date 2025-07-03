@@ -150,5 +150,10 @@ namespace KXMapStudio.App.Views
                 }
             }
         }
+
+        private void SelectAllMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            MarkersDataGrid.SelectAll();
+        }
     }
 }
