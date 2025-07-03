@@ -46,6 +46,10 @@ public partial class MainViewModel
         {
             await PackState.OpenWorkspaceAsync(dialog.FileName);
         }
+        else
+        {
+            _feedbackService.ShowMessage("Folder selection cancelled.");
+        }
     }
 
     private async Task OpenFileAsync()
@@ -54,6 +58,10 @@ public partial class MainViewModel
         if (dialog.ShowDialog() == true)
         {
             await PackState.OpenWorkspaceAsync(dialog.FileName);
+        }
+        else
+        {
+            _feedbackService.ShowMessage("File selection cancelled.");
         }
     }
 
@@ -182,14 +190,21 @@ public partial class MainViewModel
 
         if (markersForFile.Any() && currentSelection.Any())
         {
-            selectedMarker = currentSelection
-                .OrderBy(m => markersForFile.IndexOf(m))
-                .FirstOrDefault();
+            // Find the index of the last selected marker to insert after it.
+            int maxIndex = currentSelection
+                .Select(m => markersForFile.IndexOf(m))
+                .Where(idx => idx != -1) // Filter out markers not found in the active document (shouldn't happen, but for safety)
+                .DefaultIfEmpty(-1) // If no selected markers are found, default to -1
+                .Max();
 
-            if (selectedMarker != null)
+            if (maxIndex != -1)
             {
-                insertionIndex = markersForFile.IndexOf(selectedMarker);
-                if (insertionIndex == -1) { insertionIndex = 0; }
+                insertionIndex = maxIndex + 1;
+                // If the selected marker is the last one, insert at the end.
+                if (insertionIndex > markersForFile.Count) insertionIndex = markersForFile.Count;
+
+                // Also, inherit properties from the last selected marker for consistency
+                selectedMarker = markersForFile[maxIndex];
             }
         }
 

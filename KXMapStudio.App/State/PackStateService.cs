@@ -262,15 +262,33 @@ public partial class PackStateService : ObservableObject, IPackStateService
             return;
         }
 
-        if (await _workspaceManager.SaveDocumentAsAsync(_workspacePack, ActiveDocumentPath))
+        var (success, newFilePath) = await _workspaceManager.SaveDocumentAsAsync(_workspacePack, ActiveDocumentPath);
+
+        if (success)
         {
-            _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
-            _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
-            if (_workspacePack.MarkersByFile.TryGetValue(ActiveDocumentPath, out var markers))
+            if (ActiveDocumentPath.StartsWith("Untitled"))
             {
-                foreach (var marker in markers)
+                // If it was an untitled file, the workspace now becomes this single file.
+                // We need to reload the pack to ensure all internal structures are correct.
+                var newLoadedPackResult = await _workspaceManager.OpenWorkspaceAsync(newFilePath!);
+                if (newLoadedPackResult.pack != null)
                 {
-                    marker.IsDirty = false;
+                    SetWorkspaceState(newLoadedPackResult.path, newLoadedPackResult.pack);
+                    WorkspaceFiles = new ObservableCollection<string>(_workspacePack!.XmlDocuments.Keys.OrderBy(k => k));
+                    ActiveDocumentPath = WorkspaceFiles.FirstOrDefault();
+                }
+            }
+            else
+            {
+                // For existing files, just clear dirty state.
+                _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
+                _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
+                if (_workspacePack.MarkersByFile.TryGetValue(ActiveDocumentPath, out var markers))
+                {
+                    foreach (var marker in markers)
+                    {
+                        marker.IsDirty = false;
+                    }
                 }
             }
 

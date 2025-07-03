@@ -76,7 +76,7 @@ public class WorkspaceManager
         await WriteActiveDocumentToPath(workspacePack, fullSavePath, activeDocumentPath);
     }
 
-    public async Task<bool> SaveDocumentAsAsync(LoadedMarkerPack workspacePack, string activeDocumentPath)
+    public async Task<(bool success, string? newFilePath)> SaveDocumentAsAsync(LoadedMarkerPack workspacePack, string activeDocumentPath)
     {
         var dialog = new SaveFileDialog
         {
@@ -85,17 +85,14 @@ public class WorkspaceManager
             FileName = activeDocumentPath.StartsWith("Untitled") ? "MyRoute.xml" : Path.GetFileName(activeDocumentPath)
         };
 
-        if (dialog.ShowDialog() != true)
-        {
-            return false;
-        }
+        if (dialog.ShowDialog() != true) return (false, null);
 
         var newFilePath = dialog.FileName;
 
         if (Path.GetExtension(newFilePath).ToLowerInvariant() is ".taco" or ".zip")
         {
             _dialogService.ShowError("Invalid Save Location", "Saving directly into a .taco or .zip archive is not supported. Please save as a standard .xml file.");
-            return false;
+            return (false, null);
         }
 
         var markersToSave = workspacePack.MarkersByFile[activeDocumentPath];
@@ -104,7 +101,11 @@ public class WorkspaceManager
         var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement));
         _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
 
-        return await WriteDocumentToDiskAsync(newDoc, newFilePath);
+        if (await WriteDocumentToDiskAsync(newDoc, newFilePath))
+        {
+            return (true, newFilePath);
+        }
+        return (false, null);
     }
 
     private async Task WriteActiveDocumentToPath(LoadedMarkerPack workspacePack, string saveDiskPath, string sourceKeyForWorkspace)
