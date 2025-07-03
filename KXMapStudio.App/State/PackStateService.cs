@@ -1,29 +1,24 @@
 ﻿using System.Collections.ObjectModel;
-using System.IO;
-using System.Text;
 using System.Windows;
 using System.Xml.Linq;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using KXMapStudio.App.Actions;
 using KXMapStudio.App.Services;
+using KXMapStudio.App.Services.Pack;
 using KXMapStudio.Core;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
 
 namespace KXMapStudio.App.State;
 
 public partial class PackStateService : ObservableObject, IPackStateService
 {
-    private readonly PackService _packService;
-    private readonly PackWriterService _packWriterService;
-    private readonly MumbleService _mumbleService;
-    private readonly IDialogService _dialogService;
-    private readonly HistoryService _historyService;
+    
     private readonly ILogger<PackStateService> _logger;
-    private int _newFileCounter = 0;
+    private readonly WorkspaceManager _workspaceManager;
+    private readonly IMarkerCrudService _markerCrudService;
+    
 
     private LoadedMarkerPack? _workspacePack;
 
@@ -63,76 +58,98 @@ public partial class PackStateService : ObservableObject, IPackStateService
     private bool _isLoading;
 
     public bool HasUnsavedChanges => _workspacePack?.GetUnsavedDocumentPaths().Any() ?? false;
+    public bool IsActiveDocumentDirty => _workspacePack?.HasUnsavedChangesFor(ActiveDocumentPath) ?? false;
+
+    private readonly IFeedbackService _feedbackService;
+
+    private readonly MarkerXmlParser _markerXmlParser;
+    private readonly CategoryBuilder _categoryBuilder;
 
     public PackStateService(
-        PackService packService,
-        PackWriterService packWriterService,
-        MumbleService mumbleService,
-        IDialogService dialogService,
-        HistoryService historyService,
-        ILogger<PackStateService> logger)
+        IMarkerCrudService markerCrudService,
+        ILogger<PackStateService> logger,
+        WorkspaceManager workspaceManager,
+        IFeedbackService feedbackService,
+        MarkerXmlParser markerXmlParser,
+        CategoryBuilder categoryBuilder)
     {
-        _packService = packService;
-        _packWriterService = packWriterService;
-        _mumbleService = mumbleService;
-        _dialogService = dialogService;
-        _historyService = historyService;
+        _markerCrudService = markerCrudService;
         _logger = logger;
+        _workspaceManager = workspaceManager;
+        _feedbackService = feedbackService;
+        _markerXmlParser = markerXmlParser;
+        _categoryBuilder = categoryBuilder;
     }
 
     #region Marker Orchestration
 
     public void DeleteMarkers(List<Marker> markersToDelete)
     {
-        if (markersToDelete.Count == 0 || ActiveDocumentPath == null || _workspacePack == null)
+        if (markersToDelete == null || !markersToDelete.Any() || ActiveDocumentPath == null || _workspacePack == null)
         {
             return;
         }
 
-        var action = new DeleteMarkersAction(_workspacePack, ActiveDocumentPath, markersToDelete);
+        // Capture original indices before deletion
+        var originalIndices = markersToDelete
+            .Select(m => ActiveDocumentMarkers.IndexOf(m))
+            .Where(idx => idx != -1) // Ensure marker is actually in the current view
+            .OrderBy(idx => idx)
+            .ToList();
 
-        if (action.Execute())
+        _markerCrudService.DeleteMarkers(markersToDelete, ActiveDocumentPath!, _workspacePack!);
+        LoadActiveDocumentIntoView(); // Reloads ActiveDocumentMarkers
+
+        // Determine next selection
+        if (ActiveDocumentMarkers.Any())
         {
-            _historyService.Record(action);
-            LoadActiveDocumentIntoView();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            Marker? nextSelection = null;
+            // Try to select the marker immediately after the last deleted marker
+            var lastDeletedOriginalIndex = originalIndices.LastOrDefault();
+            if (lastDeletedOriginalIndex != -1 && lastDeletedOriginalIndex < ActiveDocumentMarkers.Count)
+            {
+                nextSelection = ActiveDocumentMarkers[lastDeletedOriginalIndex];
+            }
+            // If no marker after, try to select the one before the first deleted marker
+            else if (originalIndices.Any() && originalIndices.First() > 0)
+            {
+                nextSelection = ActiveDocumentMarkers[originalIndices.First() - 1];
+            }
+            // Fallback to first item if nothing else works
+            else
+            {
+                nextSelection = ActiveDocumentMarkers.FirstOrDefault();
+            }
+
+            SelectedMarkers.Clear();
+            if (nextSelection != null) 
+            {
+                SelectedMarkers.Add(nextSelection);
+            }
         }
+        else
+        {
+            SelectedMarkers.Clear();
+        }
+
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
 
     public void InsertMarker(Marker newMarker, int insertionIndex)
     {
-        if (_workspacePack == null) return;
-
-        var action = new AddMarkerAction(_workspacePack, newMarker, insertionIndex);
-        if (action.Execute())
-        {
-            _historyService.Record(action);
-            LoadActiveDocumentIntoView();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
+        _markerCrudService.InsertMarker(newMarker, insertionIndex, _workspacePack!); 
+        LoadActiveDocumentIntoView();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
 
     public void AddMarkerFromGame()
     {
-        if (ActiveDocumentPath == null || _workspacePack == null || !_mumbleService.IsAvailable)
-        {
-            return;
-        }
-
-        string markerType = SelectedCategory?.FullName ?? string.Empty;
-        var newMarker = new Marker
-        {
-            Guid = Guid.NewGuid(),
-            MapId = (int)_mumbleService.CurrentMapId,
-            X = _mumbleService.PlayerPosition.X,
-            Y = _mumbleService.PlayerPosition.Y,
-            Z = _mumbleService.PlayerPosition.Z,
-            Type = markerType,
-            SourceFile = ActiveDocumentPath,
-        };
-        newMarker.EnableChangeTracking();
-
-        InsertMarker(newMarker, -1);
+        _markerCrudService.AddMarkerFromGame(ActiveDocumentPath!, _workspacePack!, SelectedCategory?.FullName);
+        LoadActiveDocumentIntoView();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
 
     #endregion
@@ -157,24 +174,26 @@ public partial class PackStateService : ObservableObject, IPackStateService
             SetAndLoadDocument(path);
 
             string message;
+            MessageBoxResult result;
             if (IsWorkspaceArchive)
             {
-                message = $"You have unsaved changes in '{path}' (from an archive). Would you like to save a copy?";
+                message = $"You have unsaved changes in '{path}' (from a read-only archive). Would you like to save a copy?";
+                result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
             }
             else
             {
                 message = $"You have unsaved changes in '{path}'. Would you like to save them?";
+                result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
             }
-
-            var result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
 
             switch (result)
             {
                 case MessageBoxResult.Yes:
-                    bool saveSuccess;
+                    bool saveSuccess = false;
                     if (IsWorkspaceArchive)
                     {
-                        saveSuccess = await SaveAsAndContinueAsync();
+                        await SaveActiveDocumentAsAsync();
+                        saveSuccess = !(_workspacePack?.HasUnsavedChangesFor(path) ?? true);
                     }
                     else
                     {
@@ -190,17 +209,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
                 case MessageBoxResult.No:
                     if (_workspacePack != null)
                     {
-                        _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(path, StringComparison.OrdinalIgnoreCase));
-                        _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(path, StringComparison.OrdinalIgnoreCase));
-                        if (_workspacePack.MarkersByFile.TryGetValue(path, out var markers))
-                        {
-                            foreach (var marker in markers)
-                            {
-                                marker.IsDirty = false;
-                            }
-                        }
+                        RevertDocumentChanges(path);
                     }
                     OnPropertyChanged(nameof(HasUnsavedChanges));
+                    OnPropertyChanged(nameof(IsActiveDocumentDirty));
                     continue;
                 case MessageBoxResult.Cancel:
                 default:
@@ -220,36 +232,21 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
         IsLoading = true;
         CloseWorkspaceInternal();
-        try
-        {
-            var result = await _packService.LoadPackAsync(path);
-            if (result.LoadedPack == null || !result.LoadedPack.XmlDocuments.Any())
-            {
-                _logger.LogWarning("PackService returned no XML documents for path: {Path}", path);
-                _dialogService.ShowError("No XML Files Found", "The selected folder or pack does not contain any valid .xml marker files.");
-                SetWorkspaceState(null, null);
-                return;
-            }
 
-            SetWorkspaceState(path, result.LoadedPack);
+        var (pack, workspacePath) = await _workspaceManager.OpenWorkspaceAsync(path);
+
+        if (pack != null)
+        {
+            SetWorkspaceState(workspacePath, pack);
             WorkspaceFiles = new ObservableCollection<string>(_workspacePack!.XmlDocuments.Keys.OrderBy(k => k));
             ActiveDocumentPath = WorkspaceFiles.FirstOrDefault();
-
-            if (result.HasErrors)
-            {
-                ShowLoadPackErrors(result);
-            }
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "A catastrophic error occurred while loading from {Path}", path);
-            _dialogService.ShowError("An Unexpected Error Occurred", $"A critical error occurred while trying to open the workspace.\n\nDetails: {ex.Message}");
             SetWorkspaceState(null, null);
         }
-        finally
-        {
-            IsLoading = false;
-        }
+
+        IsLoading = false;
     }
 
     public async void CloseWorkspace()
@@ -265,85 +262,71 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public async Task SaveActiveDocumentAsync()
     {
+        if (ActiveDocumentPath == null || _workspacePack == null || WorkspacePath == null)
+        {
+            return;
+        }
+
+        await _workspaceManager.SaveActiveDocumentAsync(_workspacePack, ActiveDocumentPath, WorkspacePath);
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        
+    }
+
+    public async Task SaveActiveDocumentAsAsync()
+    {
         if (ActiveDocumentPath == null || _workspacePack == null)
         {
             return;
         }
 
-        if (ActiveDocumentPath.StartsWith("Untitled"))
+        var (success, newFilePath) = await _workspaceManager.SaveDocumentAsAsync(_workspacePack, ActiveDocumentPath);
+
+        if (success)
         {
-            await SaveActiveDocumentAsAsync();
-            return;
+            if (ActiveDocumentPath.StartsWith("Untitled"))
+            {
+                // If it was an untitled file, the workspace now becomes this single file.
+                // We need to reload the pack to ensure all internal structures are correct.
+                var newLoadedPackResult = await _workspaceManager.OpenWorkspaceAsync(newFilePath!);
+                if (newLoadedPackResult.pack != null)
+                {
+                    SetWorkspaceState(newLoadedPackResult.path, newLoadedPackResult.pack);
+                    WorkspaceFiles = new ObservableCollection<string>(_workspacePack!.XmlDocuments.Keys.OrderBy(k => k));
+                    ActiveDocumentPath = WorkspaceFiles.FirstOrDefault();
+                }
+            }
+            else
+            {
+                // For existing files, just clear dirty state.
+                _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
+                _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
+                if (_workspacePack.MarkersByFile.TryGetValue(ActiveDocumentPath, out var markers))
+                {
+                    foreach (var marker in markers)
+                    {
+                        marker.IsDirty = false;
+                    }
+                }
+            }
+
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(IsActiveDocumentDirty));
+            _feedbackService.ShowMessage("A copy was saved successfully. You are still working in the original workspace.");
         }
-
-        if (!HasUnsavedChanges)
-        {
-            return;
-        }
-
-        if (WorkspacePath == null)
-        {
-            _logger.LogError("Attempted to save an existing document, but WorkspacePath is null.");
-            _dialogService.ShowError("Save Error", "Cannot save the file because the original path is unknown. Please use 'Save As...'.");
-            return;
-        }
-
-        string fullSavePath = Directory.Exists(WorkspacePath)
-            ? Path.Combine(WorkspacePath, ActiveDocumentPath)
-            : WorkspacePath;
-
-        await WriteActiveDocumentToPath(fullSavePath, ActiveDocumentPath);
-    }
-
-    public async Task SaveActiveDocumentAsAsync()
-    {
-        if (ActiveDocumentPath == null || _workspacePack == null) return;
-
-        var dialog = new SaveFileDialog
-        {
-            Title = "Save Marker File As",
-            Filter = "XML Marker File (*.xml)|*.xml",
-            FileName = ActiveDocumentPath.StartsWith("Untitled") ? "MyRoute.xml" : Path.GetFileName(ActiveDocumentPath)
-        };
-
-        if (dialog.ShowDialog() != true) return;
-
-        var newFilePath = dialog.FileName;
-
-        if (Path.GetExtension(newFilePath).ToLowerInvariant() is ".taco" or ".zip")
-        {
-            _dialogService.ShowError("Invalid Save Location", "Saving directly into a .taco or .zip archive is not supported. Please save as a standard .xml file.");
-            return;
-        }
-
-        var newFileName = Path.GetFileName(newFilePath);
-        var markersToSave = _workspacePack.MarkersByFile[ActiveDocumentPath];
-        _workspacePack.UnmanagedPois.TryGetValue(ActiveDocumentPath, out var unmanagedElements);
-
-        var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement));
-        _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
-
-        if (!await WriteDocumentToDiskAsync(newDoc, newFilePath)) return;
-
-        var newLoadedPack = await _packService.LoadPackAsync(newFilePath);
-
-        CloseWorkspaceInternal();
-        SetWorkspaceState(newFilePath, newLoadedPack.LoadedPack);
-        WorkspaceFiles = new ObservableCollection<string>(_workspacePack!.XmlDocuments.Keys.OrderBy(k => k));
-        ActiveDocumentPath = WorkspaceFiles.FirstOrDefault();
-
-        _logger.LogInformation("File saved as '{newFilePath}' and workspace context has been reset to a single-file mode.", newFilePath);
     }
 
     public async Task NewFileAsync()
     {
-        if (!await CheckAndPromptToSaveChanges()) return;
+        if (!await CheckAndPromptToSaveChanges())
+        {
+            return;
+        }
 
         CloseWorkspaceInternal();
-        _newFileCounter++;
+        
 
         _logger.LogInformation("Creating a new untitled file.");
-        var untitledName = $"Untitled-{_newFileCounter}.xml";
+        var untitledName = $"Untitled-{DateTime.Now:yyyyMMddHHmmss}.xml";
 
         var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement, new XElement(TacoXmlConstants.PoisElement)));
 
@@ -366,23 +349,42 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     #region Private Helpers
 
+    private void RevertDocumentChanges(string documentPath)
+    {
+        if (_workspacePack == null || !_workspacePack.OriginalRawContent.TryGetValue(documentPath, out var originalBytes))
+        {
+            return;
+        }
+
+        _workspacePack.MarkersByFile.Remove(documentPath);
+        _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(documentPath, StringComparison.OrdinalIgnoreCase));
+        _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(documentPath, StringComparison.OrdinalIgnoreCase));
+
+        var packLoader = new PackLoader(_markerXmlParser, _categoryBuilder);
+        var result = packLoader.LoadPackFromMemoryAsync(new Dictionary<string, byte[]> { { documentPath, originalBytes } }, _workspacePack.FilePath, _workspacePack.IsArchive).Result;
+
+        if (result.LoadedPack != null && result.LoadedPack.MarkersByFile.TryGetValue(documentPath, out var revertedMarkers))
+        {
+            _workspacePack.MarkersByFile[documentPath] = revertedMarkers;
+        }
+
+        LoadActiveDocumentIntoView();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
+    }
+
     private void SetAndLoadDocument(string? newPath)
     {
         if (SetProperty(ref _activeDocumentPath, newPath, nameof(ActiveDocumentPath)))
         {
             _logger.LogInformation("Activating document: {DocumentPath}", newPath);
             LoadActiveDocumentIntoView();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            _historyService.Clear();
         }
     }
 
     private void LoadActiveDocumentIntoView()
     {
-        // Save and restore the selected category across a view reload.
         var selectedCategory = this.SelectedCategory;
-        // Marker selection is not preserved as it's cleared on delete/add operations.
-
         ActiveDocumentMarkers.Clear();
 
         if (ActiveDocumentPath == null || _workspacePack == null)
@@ -401,21 +403,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
             }
         }
 
-        // Restore the category selection.
         this.SelectedCategory = selectedCategory;
-    }
-
-    private void ShowLoadPackErrors(PackLoadResult result)
-    {
-        var errorReport = new StringBuilder();
-        errorReport.AppendLine("The pack loaded, but some files could not be read. This is usually due to data corruption in the pack file itself.\n");
-        errorReport.AppendLine("Failed files:");
-        foreach (var error in result.Errors)
-        {
-            errorReport.AppendLine($" - {error.FileName}: {error.ErrorMessage}");
-            _logger.LogWarning("Load error in {FileName}: {ErrorMessage}", error.FileName, error.ErrorMessage);
-        }
-        _dialogService.ShowError("Pack Loaded with Errors", errorReport.ToString());
     }
 
     private void CloseWorkspaceInternal()
@@ -427,7 +415,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         ActiveDocumentMarkers.Clear();
         SelectedMarkers.Clear();
         SelectedCategory = null;
-        _historyService.Clear();
     }
 
     private void SetWorkspaceState(string? workspacePath, LoadedMarkerPack? pack)
@@ -437,96 +424,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         WorkspacePath = workspacePath;
         OnPropertyChanged(nameof(HasUnsavedChanges));
         OnPropertyChanged(nameof(IsWorkspaceArchive));
-    }
-
-    private async Task WriteActiveDocumentToPath(string saveDiskPath, string sourceKeyForWorkspace)
-    {
-        if (_workspacePack == null || !_workspacePack.XmlDocuments.TryGetValue(sourceKeyForWorkspace, out var docToSave))
-        {
-            _logger.LogError("Attempted to save '{sourceKey}' but its XDocument was not found.", sourceKeyForWorkspace);
-            _dialogService.ShowError("Save Error", "Could not find the active document's XML data to save.");
-            return;
-        }
-
-        _workspacePack.UnmanagedPois.TryGetValue(sourceKeyForWorkspace, out var unmanagedElements);
-        var markersInOrder = _workspacePack.MarkersByFile[sourceKeyForWorkspace];
-        _packWriterService.RewritePoisSection(docToSave, markersInOrder, unmanagedElements ?? Enumerable.Empty<XElement>());
-
-        if (!await WriteDocumentToDiskAsync(docToSave, saveDiskPath)) return;
-
-        _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(sourceKeyForWorkspace, StringComparison.OrdinalIgnoreCase));
-        _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(sourceKeyForWorkspace, StringComparison.OrdinalIgnoreCase));
-        foreach (var marker in markersInOrder)
-        {
-            marker.IsDirty = false;
-        }
-
-        OnPropertyChanged(nameof(HasUnsavedChanges));
-        _historyService.Clear();
-
-        _logger.LogInformation("Document {docKey} saved successfully to {path}", sourceKeyForWorkspace, saveDiskPath);
-    }
-
-    private async Task<bool> SaveAsAndContinueAsync()
-    {
-        if (ActiveDocumentPath == null || _workspacePack == null) return false;
-
-        var dialog = new SaveFileDialog
-        {
-            Title = "Save Copy As",
-            Filter = "XML Marker File (*.xml)|*.xml",
-            FileName = Path.GetFileName(ActiveDocumentPath)
-        };
-
-        if (dialog.ShowDialog() != true) return false;
-
-        var newFilePath = dialog.FileName;
-
-        if (Path.GetExtension(newFilePath).ToLowerInvariant() is ".taco" or ".zip")
-        {
-            _dialogService.ShowError("Invalid Save Location", "Saving directly into a .taco or .zip archive is not supported. Please save as a standard .xml file.");
-            return false;
-        }
-
-        _workspacePack.UnmanagedPois.TryGetValue(ActiveDocumentPath, out var unmanagedElements);
-        var markersToSave = _workspacePack.MarkersByFile[ActiveDocumentPath];
-        var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement));
-        _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
-
-        if (await WriteDocumentToDiskAsync(newDoc, newFilePath))
-        {
-            _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
-            _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
-            foreach (var marker in markersToSave)
-            {
-                marker.IsDirty = false;
-            }
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            _historyService.Clear();
-            return true;
-        }
-        return false;
-    }
-
-    private async Task<bool> WriteDocumentToDiskAsync(XDocument doc, string path)
-    {
-        try
-        {
-            var tempPath = Path.GetTempFileName();
-            await using (var writer = File.CreateText(tempPath))
-            {
-                await doc.SaveAsync(writer, SaveOptions.None, CancellationToken.None);
-            }
-            File.Move(tempPath, path, true);
-            _logger.LogInformation("Successfully wrote document to disk at {Path}", path);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to write document to disk at {Path}", path);
-            _dialogService.ShowError("Save Failed", $"An error occurred while writing the file to disk:\n\n{ex.Message}");
-            return false;
-        }
     }
 
     #endregion

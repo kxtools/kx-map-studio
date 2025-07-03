@@ -12,6 +12,8 @@ namespace KXMapStudio.App.Views
 {
     public partial class MainView : Window
     {
+        private bool _isClosingHandled = false;
+
         public MainView(MainViewModel viewModel, SnackbarMessageQueue snackbarMessageQueue)
         {
             InitializeComponent();
@@ -25,6 +27,12 @@ namespace KXMapStudio.App.Views
 
         private async void MainView_Closing(object? sender, CancelEventArgs e)
         {
+            if (_isClosingHandled)
+            {
+                e.Cancel = false; // Allow the window to close if already handled
+                return;
+            }
+
             if (DataContext is not MainViewModel vm)
             {
                 return;
@@ -35,12 +43,13 @@ namespace KXMapStudio.App.Views
                 return; // No unsaved changes, let the window close normally.
             }
 
-            e.Cancel = true;
+            e.Cancel = true; // Prevent immediate close
 
             bool canProceed = await vm.PackState.CheckAndPromptToSaveChanges();
 
             if (canProceed)
             {
+                _isClosingHandled = true; // Set the flag before initiating shutdown
                 Application.Current.Shutdown();
             }
         }

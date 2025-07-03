@@ -22,6 +22,7 @@ public interface IPackStateService : INotifyPropertyChanged
     ObservableCollection<Marker> SelectedMarkers { get; }
     bool IsLoading { get; }
     bool HasUnsavedChanges { get; }
+    bool IsActiveDocumentDirty { get; }
 
     Task<bool> CheckAndPromptToSaveChanges();
     Task OpenWorkspaceAsync(string path);

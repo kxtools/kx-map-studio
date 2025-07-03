@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 
 using KXMapStudio.App.Services;
+using KXMapStudio.App.Services.Pack;
 using KXMapStudio.App.State;
 using KXMapStudio.App.ViewModels;
 using KXMapStudio.App.ViewModels.PropertyEditor;
@@ -10,6 +11,7 @@ using MaterialDesignThemes.Wpf;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 using Serilog;
 
@@ -47,7 +49,22 @@ namespace KXMapStudio.App
                     services.AddSingleton<GlobalHotkeyService>();
                     services.AddSingleton<UpdateService>();
 
-                    services.AddSingleton<IPackStateService, PackStateService>();
+                    services.AddSingleton<MarkerXmlParser>();
+                    services.AddSingleton<CategoryBuilder>();
+                    services.AddSingleton<PackLoader>();
+                    services.AddSingleton<PackLoaderFactory>();
+                    services.AddSingleton<WorkspaceManager>();
+
+                    services.AddSingleton<IMarkerCrudService, MarkerCrudService>();
+
+                    services.AddSingleton<IPackStateService, PackStateService>(sp =>
+                        new PackStateService(
+                            sp.GetRequiredService<IMarkerCrudService>(),
+                            sp.GetRequiredService<ILogger<PackStateService>>(),
+                            sp.GetRequiredService<WorkspaceManager>(),
+                            sp.GetRequiredService<IFeedbackService>(),
+                            sp.GetRequiredService<MarkerXmlParser>(),
+                            sp.GetRequiredService<CategoryBuilder>()));
                 })
                 .Build();
         }
