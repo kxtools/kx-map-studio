@@ -114,7 +114,6 @@ public partial class MainViewModel
     public void MoveMarkersUp(List<Marker> markersToMove)
     {
         var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Up);
-        action.Execute();
         _historyService.Do(action);
     }
 
@@ -132,7 +131,6 @@ public partial class MainViewModel
     public void MoveMarkersDown(List<Marker> markersToMove)
     {
         var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Down);
-        action.Execute();
         _historyService.Do(action);
     }
 
