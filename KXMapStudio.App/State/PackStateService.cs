@@ -391,6 +391,13 @@ public partial class PackStateService : ObservableObject, IPackStateService
     public void LoadActiveDocumentIntoView()
     {
         var selectedCategory = this.SelectedCategory;
+
+        // Unsubscribe from old markers before clearing
+        foreach (var marker in ActiveDocumentMarkers)
+        {
+            marker.PropertyChanged -= OnMarkerPropertyChanged;
+        }
+
         ActiveDocumentMarkers.Clear();
 
         if (ActiveDocumentPath == null || _workspacePack == null)
@@ -406,10 +413,24 @@ public partial class PackStateService : ObservableObject, IPackStateService
             foreach (var marker in markersForThisDoc)
             {
                 ActiveDocumentMarkers.Add(marker);
+                marker.PropertyChanged += OnMarkerPropertyChanged; // Subscribe to new markers
             }
         }
 
         this.SelectedCategory = selectedCategory;
+    }
+
+    private void OnMarkerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Marker.IsDirty))
+        {
+            // Only update if the dirty state actually changed and it's for the active document
+            if (sender is Marker marker && marker.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                OnPropertyChanged(nameof(IsActiveDocumentDirty));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+            }
+        }
     }
 
     private void CloseWorkspaceInternal()
