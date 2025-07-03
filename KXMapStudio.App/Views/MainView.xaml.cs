@@ -35,21 +35,14 @@ namespace KXMapStudio.App.Views
                 return; // No unsaved changes, let the window close normally.
             }
 
-            // 1. Immediately cancel the original close event to give our async code time to run.
             e.Cancel = true;
 
-            // 2. Ask the user what to do with their unsaved changes.
             bool canProceed = await vm.PackState.CheckAndPromptToSaveChanges();
 
-            // 3. If the user action succeeded (saved or discarded), shut down the application.
             if (canProceed)
             {
-                // This is the key change. Instead of trying to close the window again,
-                // we tell the entire application to shut down. This is safe and avoids the exception.
                 Application.Current.Shutdown();
             }
-            // If canProceed is false, the user clicked "Cancel", and we do nothing,
-            // leaving the window open as intended.
         }
 
         private void DataGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -95,7 +88,6 @@ namespace KXMapStudio.App.Views
 
         private async void WorkspaceFilesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // We only care about user-initiated selections.
             if (e.AddedItems.Count == 0)
             {
                 return;
@@ -109,38 +101,29 @@ namespace KXMapStudio.App.Views
             var listBox = (ListBox)sender;
             var newPath = (string)e.AddedItems[0]!;
 
-            // Get the source of truth for the current path from the ViewModel,
-            // as the binding is now OneWay.
             var currentPath = vm.PackState.ActiveDocumentPath;
 
-            // If the user simply re-clicked the already active item, do nothing.
             if (Equals(currentPath, newPath))
             {
                 return;
             }
 
-            // Ask the ViewModel for permission to change the document.
             bool canProceed = await vm.RequestChangeDocumentAsync();
 
             if (canProceed)
             {
-                // Permission granted. Officially update the ViewModel's state.
                 vm.PackState.ActiveDocumentPath = newPath;
             }
             else
             {
-                // Permission denied (user clicked "Cancel").
-                // Revert the ListBox's visual selection back to the original item.
-                // To prevent this from re-triggering this event handler, we unhook it.
                 listBox.SelectionChanged -= WorkspaceFilesListBox_SelectionChanged;
-                listBox.SelectedItem = currentPath; // Revert to the old path from the ViewModel.
+                listBox.SelectedItem = currentPath;
                 listBox.SelectionChanged += WorkspaceFilesListBox_SelectionChanged;
             }
         }
 
         private void SelectedMarkers_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            // If a single new item was added to the selection, scroll it into view.
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems?.Count == 1)
             {
                 var newItem = e.NewItems[0];
@@ -160,10 +143,8 @@ namespace KXMapStudio.App.Views
         {
             if (DataContext is MainViewModel vm)
             {
-                // Get the selection DIRECTLY from the DataGrid UI element.
                 var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
 
-                // Call a new method on the ViewModel, passing the actual selection.
                 vm.DeleteMarkers(selectedMarkers);
             }
         }

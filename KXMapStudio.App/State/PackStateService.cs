@@ -89,7 +89,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
             return;
         }
 
-        // We are now using the list passed directly from the UI, bypassing the potentially desynced collection.
         var action = new DeleteMarkersAction(_workspacePack, ActiveDocumentPath, markersToDelete);
 
         if (action.Execute())
@@ -108,7 +107,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         if (action.Execute())
         {
             _historyService.Record(action);
-            // After changing the model, just reload the view from the model.
             LoadActiveDocumentIntoView();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -134,7 +132,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         };
         newMarker.EnableChangeTracking();
 
-        // Use the append functionality of InsertMarker
         InsertMarker(newMarker, -1);
     }
 
@@ -382,9 +379,9 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     private void LoadActiveDocumentIntoView()
     {
-        // We need to save and restore the selection across a full reload.
+        // Save and restore the selected category across a view reload.
         var selectedCategory = this.SelectedCategory;
-        // NOTE: We don't save/restore marker selection as it's cleared on delete/add.
+        // Marker selection is not preserved as it's cleared on delete/add operations.
 
         ActiveDocumentMarkers.Clear();
 

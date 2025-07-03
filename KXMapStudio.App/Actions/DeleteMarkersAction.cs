@@ -1,84 +1,83 @@
 ﻿using KXMapStudio.App.Services;
 using KXMapStudio.Core;
 
-namespace KXMapStudio.App.Actions
+namespace KXMapStudio.App.Actions;
+
+public class DeleteMarkersAction : IAction
 {
-    public class DeleteMarkersAction : IAction
+    private readonly LoadedMarkerPack _workspacePack;
+    private readonly List<(Marker Marker, int OriginalIndex)> _markersWithIndex;
+    private readonly string _activeDocumentPath;
+
+    public ActionType Type => ActionType.DeleteMarkers;
+
+    public DeleteMarkersAction(LoadedMarkerPack workspacePack, string activeDocumentPath, IEnumerable<Marker> markersToDelete)
     {
-        private readonly LoadedMarkerPack _workspacePack;
-        private readonly List<(Marker Marker, int OriginalIndex)> _markersWithIndex;
-        private readonly string _activeDocumentPath;
+        _workspacePack = workspacePack;
+        _activeDocumentPath = activeDocumentPath;
+        _markersWithIndex = new List<(Marker, int)>();
 
-        public ActionType Type => ActionType.DeleteMarkers;
-
-        public DeleteMarkersAction(LoadedMarkerPack workspacePack, string activeDocumentPath, IEnumerable<Marker> markersToDelete)
+        var fileMarkers = workspacePack.MarkersByFile[_activeDocumentPath];
+        foreach (var marker in markersToDelete)
         {
-            _workspacePack = workspacePack;
-            _activeDocumentPath = activeDocumentPath;
-            _markersWithIndex = new List<(Marker, int)>();
-
-            var fileMarkers = workspacePack.MarkersByFile[_activeDocumentPath];
-            foreach (var marker in markersToDelete)
+            int index = fileMarkers.IndexOf(marker);
+            if (index != -1)
             {
-                int index = fileMarkers.IndexOf(marker);
-                if (index != -1)
-                {
-                    _markersWithIndex.Add((marker, index));
-                }
+                _markersWithIndex.Add((marker, index));
             }
         }
+    }
 
-        public bool Execute()
+    public bool Execute()
+    {
+        var fileMarkers = _workspacePack.MarkersByFile[_activeDocumentPath];
+
+        foreach (var (marker, _) in _markersWithIndex.OrderByDescending(m => m.OriginalIndex))
         {
-            var fileMarkers = _workspacePack.MarkersByFile[_activeDocumentPath];
+            fileMarkers.Remove(marker);
+            FindParentCategory(marker)?.Markers.Remove(marker);
 
-            foreach (var (marker, _) in _markersWithIndex.OrderByDescending(m => m.OriginalIndex))
+            if (_workspacePack.AddedMarkers.Contains(marker))
             {
-                fileMarkers.Remove(marker);
-                FindParentCategory(marker)?.Markers.Remove(marker);
-
-                if (_workspacePack.AddedMarkers.Contains(marker))
-                {
-                    _workspacePack.AddedMarkers.Remove(marker);
-                }
-                else
-                {
-                    _workspacePack.DeletedMarkers.Add(marker);
-                }
+                _workspacePack.AddedMarkers.Remove(marker);
             }
-            return true;
+            else
+            {
+                _workspacePack.DeletedMarkers.Add(marker);
+            }
         }
+        return true;
+    }
 
-        public bool Undo()
+    public bool Undo()
+    {
+        var fileMarkers = _workspacePack.MarkersByFile[_activeDocumentPath];
+
+        foreach (var (marker, originalIndex) in _markersWithIndex.OrderBy(m => m.OriginalIndex))
         {
-            var fileMarkers = _workspacePack.MarkersByFile[_activeDocumentPath];
+            fileMarkers.Insert(originalIndex, marker);
+            FindParentCategory(marker)?.Markers.Add(marker);
 
-            foreach (var (marker, originalIndex) in _markersWithIndex.OrderBy(m => m.OriginalIndex))
+            if (_workspacePack.DeletedMarkers.Contains(marker))
             {
-                fileMarkers.Insert(originalIndex, marker);
-                FindParentCategory(marker)?.Markers.Add(marker);
-
-                if (_workspacePack.DeletedMarkers.Contains(marker))
-                {
-                    _workspacePack.DeletedMarkers.Remove(marker);
-                }
-                else
-                {
-                    _workspacePack.AddedMarkers.Add(marker);
-                }
+                _workspacePack.DeletedMarkers.Remove(marker);
             }
-            return true;
+            else
+            {
+                _workspacePack.AddedMarkers.Add(marker);
+            }
         }
+        return true;
+    }
 
-        private Category? FindParentCategory(Marker marker)
+    private Category? FindParentCategory(Marker marker)
+    {
+        if (string.IsNullOrEmpty(marker.Type))
         {
-            if (string.IsNullOrEmpty(marker.Type))
-            {
-                return _workspacePack.RootCategory;
-            }
-            return _workspacePack.RootCategory
-                       .GetAllCategoriesRecursively()
-                       .FirstOrDefault(c => c.FullName.Equals(marker.Type, StringComparison.OrdinalIgnoreCase));
+            return _workspacePack.RootCategory;
         }
+        return _workspacePack.RootCategory
+                   .GetAllCategoriesRecursively()
+                   .FirstOrDefault(c => c.FullName.Equals(marker.Type, StringComparison.OrdinalIgnoreCase));
     }
 }

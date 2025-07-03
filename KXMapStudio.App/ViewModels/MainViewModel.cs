@@ -29,7 +29,6 @@ public partial class MainViewModel : ObservableObject
     private IAsyncRelayCommand _closeWorkspaceCommand = null!;
     private IAsyncRelayCommand _saveDocumentCommand = null!;
     private IRelayCommand _addMarkerFromGameCommand = null!;
-    //private IRelayCommand _deleteSelectedMarkersCommand = null!;
     private IRelayCommand _copySelectedMarkerGuidCommand = null!;
     private IRelayCommand _undoCommand = null!;
     private IRelayCommand _redoCommand = null!;
@@ -49,7 +48,6 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand CloseWorkspaceCommand => _closeWorkspaceCommand;
     public IAsyncRelayCommand SaveDocumentCommand => _saveDocumentCommand;
     public IRelayCommand AddMarkerFromGameCommand => _addMarkerFromGameCommand;
-    //public IRelayCommand DeleteSelectedMarkersCommand => _deleteSelectedMarkersCommand;
     public IRelayCommand CopySelectedMarkerGuidCommand => _copySelectedMarkerGuidCommand;
     public IRelayCommand UndoCommand => _undoCommand;
     public IRelayCommand RedoCommand => _redoCommand;
@@ -150,7 +148,6 @@ public partial class MainViewModel : ObservableObject
 
     public void DeleteMarkers(List<Marker> markersToDelete)
     {
-        // Pass the actual list of markers to the service.
         PackState.DeleteMarkers(markersToDelete);
     }
 
@@ -201,7 +198,6 @@ public partial class MainViewModel : ObservableObject
                 break;
             case nameof(IPackStateService.SelectedCategory):
                 UpdateMarkersInView();
-                //SelectAllMarkersCommand.NotifyCanExecuteChanged();
                 break;
         }
     }
@@ -237,7 +233,6 @@ public partial class MainViewModel : ObservableObject
 
     private void OnActiveDocumentMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // This method is now the single point of synchronization between the state and the view model's list.
         if (e.Action == NotifyCollectionChangedAction.Reset)
         {
             UpdateMarkersInView();
@@ -314,9 +309,6 @@ public partial class MainViewModel : ObservableObject
     private void AddMarkerFromGame()
     {
         PackState.AddMarkerFromGame();
-        // The selection logic is now handled in the service via the dispatcher.
-        // We can simplify this, but let's first review the service.
-        // For now, let's keep the dispatcher logic here as it's a UX concern.
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
             if (PackState.ActiveDocumentMarkers.Any())
