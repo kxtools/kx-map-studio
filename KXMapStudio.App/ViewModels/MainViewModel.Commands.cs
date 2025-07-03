@@ -183,30 +183,10 @@ public partial class MainViewModel
             return;
         }
 
-        int insertionIndex = 0;
-        Marker? selectedMarker = null;
-
         var markersForFile = PackState.WorkspacePack.MarkersByFile[PackState.ActiveDocumentPath];
 
-        if (markersForFile.Any() && currentSelection.Any())
-        {
-            // Find the index of the last selected marker to insert after it.
-            int maxIndex = currentSelection
-                .Select(m => markersForFile.IndexOf(m))
-                .Where(idx => idx != -1) // Filter out markers not found in the active document (shouldn't happen, but for safety)
-                .DefaultIfEmpty(-1) // If no selected markers are found, default to -1
-                .Max();
-
-            if (maxIndex != -1)
-            {
-                insertionIndex = maxIndex + 1;
-                // If the selected marker is the last one, insert at the end.
-                if (insertionIndex > markersForFile.Count) insertionIndex = markersForFile.Count;
-
-                // Also, inherit properties from the last selected marker for consistency
-                selectedMarker = markersForFile[maxIndex];
-            }
-        }
+        int insertionIndex = markersForFile.Count;
+        Marker? selectedMarker = null;
 
         var newMarker = new Marker
         {
