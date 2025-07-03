@@ -24,7 +24,7 @@ public class MarkerCrudService : IMarkerCrudService
             return;
         }
 
-        var action = new DeleteMarkersAction(packState.ActiveDocumentMarkers, markersToDelete);
+        var action = new DeleteMarkersAction(packState.ActiveDocumentMarkers, markersToDelete, workspacePack);
 
         _historyService.Do(action);
     }
@@ -36,7 +36,7 @@ public class MarkerCrudService : IMarkerCrudService
             return;
         }
 
-        var action = new AddMarkerAction(packState.ActiveDocumentMarkers, newMarker, insertionIndex);
+        var action = new AddMarkerAction(packState.ActiveDocumentMarkers, newMarker, insertionIndex, workspacePack);
         _historyService.Do(action);
     }
 

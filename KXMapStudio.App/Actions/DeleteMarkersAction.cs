@@ -8,13 +8,15 @@ public class DeleteMarkersAction : IAction
 {
     private readonly ObservableCollection<Marker> _activeDocumentMarkers;
     private readonly List<(Marker Marker, int OriginalIndex)> _markersWithIndex;
+    private readonly LoadedMarkerPack _workspacePack;
 
     public ActionType Type => ActionType.DeleteMarkers;
 
-    public DeleteMarkersAction(ObservableCollection<Marker> activeDocumentMarkers, IEnumerable<Marker> markersToDelete)
+    public DeleteMarkersAction(ObservableCollection<Marker> activeDocumentMarkers, IEnumerable<Marker> markersToDelete, LoadedMarkerPack workspacePack)
     {
         _activeDocumentMarkers = activeDocumentMarkers;
         _markersWithIndex = new List<(Marker, int)>();
+        _workspacePack = workspacePack;
 
         foreach (var marker in markersToDelete)
         {
@@ -31,6 +33,7 @@ public class DeleteMarkersAction : IAction
         foreach (var (marker, _) in _markersWithIndex.OrderByDescending(m => m.OriginalIndex))
         {
             _activeDocumentMarkers.Remove(marker);
+            _workspacePack.DeletedMarkers.Add(marker);
         }
         return true;
     }
@@ -40,6 +43,7 @@ public class DeleteMarkersAction : IAction
         foreach (var (marker, originalIndex) in _markersWithIndex.OrderBy(m => m.OriginalIndex))
         {
             _activeDocumentMarkers.Insert(originalIndex, marker);
+            _workspacePack.DeletedMarkers.Remove(marker);
         }
         return true;
     }
