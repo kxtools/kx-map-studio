@@ -22,9 +22,7 @@ public partial class MainViewModel
         _moveSelectedMarkersDownCommand = new RelayCommand(() => MoveMarkersDown(PackState.SelectedMarkers.ToList()), () => CanMoveSelectedMarkersDown());
         _copySelectedMarkerGuidCommand = new RelayCommand(() => CopySelectedMarkerGuid(PackState.SelectedMarkers.ToList()), () => PackState.SelectedMarkers.Count == 1);
 
-        _insertNewMarkerCommand = new RelayCommand(
-            () => InsertNewMarker(PackState.SelectedMarkers.ToList()),
-            () => PackState.ActiveDocumentPath != null);
+        _insertNewMarkerCommand = new RelayCommand<Marker?>(InsertNewMarker, (marker) => PackState.ActiveDocumentPath != null);
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
@@ -183,7 +181,7 @@ public partial class MainViewModel
         }
     }
 
-    public void InsertNewMarker(List<Marker> currentSelection)
+    public void InsertNewMarker(Marker? rightClickedMarker)
     {
         if (PackState.WorkspacePack == null || PackState.ActiveDocumentPath == null)
         {
@@ -193,16 +191,19 @@ public partial class MainViewModel
         var markersForFile = PackState.WorkspacePack.MarkersByFile[PackState.ActiveDocumentPath];
 
         int insertionIndex = markersForFile.Count;
-        Marker? selectedMarker = null;
+        if (rightClickedMarker != null)
+        {
+            insertionIndex = PackState.ActiveDocumentMarkers.IndexOf(rightClickedMarker) + 1;
+        }
 
         var newMarker = new Marker
         {
             Guid = Guid.NewGuid(),
-            MapId = selectedMarker?.MapId ?? (int)MumbleService.CurrentMapId,
-            X = selectedMarker?.X ?? MumbleService.PlayerPosition.X,
-            Y = selectedMarker?.Y ?? MumbleService.PlayerPosition.Y,
-            Z = selectedMarker?.Z ?? MumbleService.PlayerPosition.Z,
-            Type = selectedMarker?.Type ?? PackState.SelectedCategory?.FullName ?? string.Empty,
+            MapId = rightClickedMarker?.MapId ?? (int)MumbleService.CurrentMapId,
+            X = rightClickedMarker?.X ?? MumbleService.PlayerPosition.X,
+            Y = rightClickedMarker?.Y ?? MumbleService.PlayerPosition.Y,
+            Z = rightClickedMarker?.Z ?? MumbleService.PlayerPosition.Z,
+            Type = rightClickedMarker?.Type ?? PackState.SelectedCategory?.FullName ?? string.Empty,
             SourceFile = PackState.ActiveDocumentPath,
         };
         newMarker.EnableChangeTracking();

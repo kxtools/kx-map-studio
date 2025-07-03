@@ -36,7 +36,8 @@
         <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoCommand}" />
         <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoCommand}" />
         <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveDocumentCommand}" />
-        <KeyBinding Modifiers="Control" Key="I" Command="{Binding InsertNewMarkerCommand}" />
+        
+        <KeyBinding Modifiers="Control" Key="I" Command="{Binding InsertNewMarkerCommand}" CommandParameter="{x:Null}" />
         <KeyBinding Modifiers="Control" Key="A" Command="{x:Static DataGrid.SelectAllCommand}" CommandTarget="{Binding ElementName=MarkersDataGrid}" />
         <KeyBinding Modifiers="Alt" Key="Up" Command="{Binding MoveSelectedMarkersUpCommand}" />
         <KeyBinding Modifiers="Alt" Key="Down" Command="{Binding MoveSelectedMarkersDownCommand}" />
@@ -218,7 +219,7 @@
                             </DataGrid.Columns>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Insert New Marker Here" InputGestureText="Ctrl+I" Click="InsertMenuItem_Click" />
+                                    <MenuItem Header="Insert New Marker Here" InputGestureText="Ctrl+I" Command="{Binding InsertNewMarkerCommand}" CommandParameter="{Binding Path=PlacementTarget.SelectedItem, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ContextMenu}}}" />
                                     <Separator/>
                                     <MenuItem Header="Select All" InputGestureText="Ctrl+A" Click="SelectAllMenuItem_Click" />
                                     <MenuItem Header="Move Up" InputGestureText="Alt+Up" Click="MoveUpMenuItem_Click" />
