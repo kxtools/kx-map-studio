@@ -1,9 +1,8 @@
-using KXMapStudio.App.Actions;
+﻿using KXMapStudio.App.Actions;
 using KXMapStudio.App.Services;
 using KXMapStudio.App.State;
 using KXMapStudio.Core;
 using System.Collections.Specialized;
-using System.Windows;
 
 namespace KXMapStudio.App.ViewModels;
 

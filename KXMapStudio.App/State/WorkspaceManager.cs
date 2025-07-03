@@ -1,11 +1,9 @@
-using KXMapStudio.App.Services;
+﻿using KXMapStudio.App.Services;
 using KXMapStudio.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Xml.Linq;
 
 namespace KXMapStudio.App.State;

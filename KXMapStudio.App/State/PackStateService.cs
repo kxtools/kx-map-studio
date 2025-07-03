@@ -1,6 +1,4 @@
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Text;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using System.Xml.Linq;
 

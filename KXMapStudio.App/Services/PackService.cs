@@ -1,6 +1,5 @@
-using KXMapStudio.App.Services.Pack;
+﻿using KXMapStudio.App.Services.Pack;
 using KXMapStudio.Core;
-using System.Threading.Tasks;
 
 namespace KXMapStudio.App.Services;
 

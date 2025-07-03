@@ -1,7 +1,5 @@
-using CommunityToolkit.Mvvm.Input;
+﻿using CommunityToolkit.Mvvm.Input;
 using KXMapStudio.App.Actions;
-using KXMapStudio.App.Services;
-using KXMapStudio.App.State;
 using KXMapStudio.App.Utilities;
 using KXMapStudio.Core;
 using Microsoft.Win32;
