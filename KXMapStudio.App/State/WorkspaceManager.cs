@@ -57,12 +57,6 @@ public class WorkspaceManager
 
     public async Task SaveActiveDocumentAsync(LoadedMarkerPack workspacePack, string activeDocumentPath, string workspacePath, ObservableCollection<Marker> activeDocumentMarkers)
     {
-        if (activeDocumentPath.StartsWith("Untitled"))
-        {
-            await SaveDocumentAsAsync(workspacePack, activeDocumentPath, activeDocumentMarkers);
-            return;
-        }
-
         if (workspacePath == null)
         {
             _logger.LogError("Attempted to save an existing document, but WorkspacePath is null.");

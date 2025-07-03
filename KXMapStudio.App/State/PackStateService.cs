@@ -259,6 +259,12 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public async Task SaveActiveDocumentAsync()
     {
+        if (ActiveDocumentPath != null && ActiveDocumentPath.StartsWith("Untitled-"))
+        {
+            await SaveActiveDocumentAsAsync();
+            return;
+        }
+
         if (ActiveDocumentPath == null || _workspacePack == null || WorkspacePath == null)
         {
             return;

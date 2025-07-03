@@ -71,17 +71,7 @@ public partial class MainViewModel
 
     private async Task SaveDocumentAsync()
     {
-        if (PackState.ActiveDocumentPath == null)
-        {
-            return;
-        }
-
         await PackState.SaveActiveDocumentAsync();
-
-        if (!PackState.HasUnsavedChanges)
-        {
-            _feedbackService.ShowMessage($"Saved {Path.GetFileName(PackState.ActiveDocumentPath)}");
-        }
     }
 
     private void AddMarkerFromGame()
