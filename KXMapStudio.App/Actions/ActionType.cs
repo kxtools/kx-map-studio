@@ -7,6 +7,7 @@
     {
         Other,
         AddMarker,
+        InsertMarker,
         DeleteMarkers,
         ReorderMarkers,
         ChangeProperties,

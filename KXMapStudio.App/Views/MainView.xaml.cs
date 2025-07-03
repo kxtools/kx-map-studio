@@ -19,6 +19,8 @@ namespace KXMapStudio.App.Views
             this.Closing += MainView_Closing;
 
             MainSnackbar.MessageQueue = snackbarMessageQueue;
+
+            viewModel.PackState.SelectedMarkers.CollectionChanged += SelectedMarkers_CollectionChanged;
         }
 
         private async void MainView_Closing(object? sender, CancelEventArgs e)
@@ -133,6 +135,19 @@ namespace KXMapStudio.App.Views
                 listBox.SelectionChanged -= WorkspaceFilesListBox_SelectionChanged;
                 listBox.SelectedItem = currentPath; // Revert to the old path from the ViewModel.
                 listBox.SelectionChanged += WorkspaceFilesListBox_SelectionChanged;
+            }
+        }
+
+        private void SelectedMarkers_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            // If a single new item was added to the selection, scroll it into view.
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems?.Count == 1)
+            {
+                var newItem = e.NewItems[0];
+                if (newItem != null)
+                {
+                    MarkersDataGrid.ScrollIntoView(newItem);
+                }
             }
         }
     }

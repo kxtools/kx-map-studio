@@ -36,6 +36,7 @@
         <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoCommand}" />
         <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoCommand}" />
         <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveDocumentCommand}" />
+        <KeyBinding Modifiers="Control" Key="I" Command="{Binding InsertNewMarkerCommand}" />
         <KeyBinding Modifiers="Alt" Key="Up" Command="{Binding MoveSelectedMarkersUpCommand}" />
         <KeyBinding Modifiers="Alt" Key="Down" Command="{Binding MoveSelectedMarkersDownCommand}" />
     </Window.InputBindings>
@@ -195,7 +196,8 @@
                     <GridSplitter Grid.Column="1" Width="5" VerticalAlignment="Stretch" HorizontalAlignment="Center" Style="{StaticResource MaterialDesignGridSplitter}" />
 
                     <materialDesign:Card Grid.Column="2" Margin="5" Padding="0" UniformCornerRadius="4" VerticalAlignment="Stretch">
-                        <DataGrid ItemsSource="{Binding MarkersInView}" AutoGenerateColumns="False"
+                        <DataGrid x:Name="MarkersDataGrid"
+                                  ItemsSource="{Binding MarkersInView}" AutoGenerateColumns="False"
                                   CanUserAddRows="False" IsReadOnly="False"
                                   GridLinesVisibility="Horizontal" HeadersVisibility="Column" SelectionMode="Extended"
                                   materialDesign:DataGridAssist.CellPadding="12 4"
@@ -215,6 +217,8 @@
                             </DataGrid.Columns>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="Insert New Marker Here" Command="{Binding InsertNewMarkerCommand}" InputGestureText="Ctrl+I" />
+                                    <Separator/>
                                     <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up" />
                                     <MenuItem Header="Move Down" Command="{Binding MoveSelectedMarkersDownCommand}" InputGestureText="Alt+Down" />
                                     <Separator/>

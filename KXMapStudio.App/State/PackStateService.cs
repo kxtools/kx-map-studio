@@ -30,6 +30,8 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     private LoadedMarkerPack? _workspacePack;
 
+    public LoadedMarkerPack? WorkspacePack => _workspacePack;
+
     [ObservableProperty]
     private string? _workspacePath;
 

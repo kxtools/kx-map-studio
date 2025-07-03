@@ -41,6 +41,7 @@ public partial class MainViewModel : ObservableObject
     private IRelayCommand _openDiscordLinkCommand = null!;
     private IRelayCommand _openGitHubLinkCommand = null!;
     private IRelayCommand<string> _openLinkCommand = null!;
+    private IRelayCommand _insertNewMarkerCommand = null!;
 
     public IRelayCommand SelectCategoryCommand => _selectCategoryCommand;
     public IAsyncRelayCommand OpenFolderCommand => _openFolderCommand;
@@ -60,6 +61,7 @@ public partial class MainViewModel : ObservableObject
     public IRelayCommand OpenDiscordLinkCommand => _openDiscordLinkCommand;
     public IRelayCommand OpenGitHubLinkCommand => _openGitHubLinkCommand;
     public IRelayCommand<string> OpenLinkCommand => _openLinkCommand;
+    public IRelayCommand InsertNewMarkerCommand => _insertNewMarkerCommand;
 
     public IPackStateService PackState { get; }
     public MumbleService MumbleService { get; }
@@ -115,6 +117,7 @@ public partial class MainViewModel : ObservableObject
         _saveAsCommand = new AsyncRelayCommand(PackState.SaveActiveDocumentAsAsync, () => PackState.IsWorkspaceLoaded);
         _moveSelectedMarkersUpCommand = new RelayCommand(MoveSelectedMarkersUp, CanMoveSelectedMarkersUp);
         _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
+        _insertNewMarkerCommand = new RelayCommand(InsertNewMarker, () => PackState.ActiveDocumentPath != null);
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
@@ -419,5 +422,51 @@ public partial class MainViewModel : ObservableObject
                 IsUpdateAvailable = true;
             });
         }
+    }
+
+    private void InsertNewMarker()
+    {
+        if (PackState.WorkspacePack == null || PackState.ActiveDocumentPath == null)
+        {
+            return;
+        }
+
+        // Determine the insertion index. Default to 0 if nothing is selected.
+        int insertionIndex = 0;
+        Marker? selectedMarker = null;
+
+        if (MarkersInView.Any() && PackState.SelectedMarkers.Any())
+        {
+            // Find the topmost selected marker in the current view
+            selectedMarker = PackState.SelectedMarkers
+                .OrderBy(m => MarkersInView.IndexOf(m))
+                .FirstOrDefault();
+
+            if (selectedMarker != null)
+            {
+                insertionIndex = MarkersInView.IndexOf(selectedMarker);
+            }
+        }
+
+        // Create a new marker, using the selected marker's data as a default if available.
+        var newMarker = new Marker
+        {
+            Guid = Guid.NewGuid(),
+            MapId = selectedMarker?.MapId ?? (int)MumbleService.CurrentMapId,
+            X = selectedMarker?.X ?? MumbleService.PlayerPosition.X,
+            Y = selectedMarker?.Y ?? MumbleService.PlayerPosition.Y,
+            Z = selectedMarker?.Z ?? MumbleService.PlayerPosition.Z,
+            Type = selectedMarker?.Type ?? PackState.SelectedCategory?.FullName ?? string.Empty,
+            SourceFile = PackState.ActiveDocumentPath,
+        };
+        newMarker.EnableChangeTracking();
+
+        var action = new InsertMarkerAction(PackState, PackState.WorkspacePack, newMarker, insertionIndex);
+        action.Execute();
+        _historyService.Record(action);
+
+        // For good UX, clear the current selection and select the newly added marker.
+        PackState.SelectedMarkers.Clear();
+        PackState.SelectedMarkers.Add(newMarker);
     }
 }

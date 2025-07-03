@@ -10,6 +10,7 @@ public interface IPackStateService : INotifyPropertyChanged
     event Action<Marker> MarkerAdded;
     event Action<Marker> MarkerDeleted;
 
+    LoadedMarkerPack? WorkspacePack { get; }
     string? WorkspacePath { get; }
     ObservableCollection<string> WorkspaceFiles { get; }
     bool IsWorkspaceLoaded { get; }
