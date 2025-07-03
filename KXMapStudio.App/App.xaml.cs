@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 
 using KXMapStudio.App.Services;
+using KXMapStudio.App.Services.Pack;
 using KXMapStudio.App.State;
 using KXMapStudio.App.ViewModels;
 using KXMapStudio.App.ViewModels.PropertyEditor;
@@ -46,6 +47,9 @@ namespace KXMapStudio.App
                     services.AddSingleton<HistoryService>();
                     services.AddSingleton<GlobalHotkeyService>();
                     services.AddSingleton<UpdateService>();
+
+                    services.AddSingleton<PackLoaderFactory>();
+                    services.AddSingleton<WorkspaceManager>();
 
                     services.AddSingleton<IPackStateService, PackStateService>();
                 })
