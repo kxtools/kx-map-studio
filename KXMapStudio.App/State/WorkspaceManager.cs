@@ -5,6 +5,7 @@ using Microsoft.Win32;
 using System.IO;
 using System.Text;
 using System.Xml.Linq;
+using System.Collections.ObjectModel;
 
 namespace KXMapStudio.App.State;
 
@@ -54,11 +55,11 @@ public class WorkspaceManager
         }
     }
 
-    public async Task SaveActiveDocumentAsync(LoadedMarkerPack workspacePack, string activeDocumentPath, string workspacePath)
+    public async Task SaveActiveDocumentAsync(LoadedMarkerPack workspacePack, string activeDocumentPath, string workspacePath, ObservableCollection<Marker> activeDocumentMarkers)
     {
         if (activeDocumentPath.StartsWith("Untitled"))
         {
-            await SaveDocumentAsAsync(workspacePack, activeDocumentPath);
+            await SaveDocumentAsAsync(workspacePack, activeDocumentPath, activeDocumentMarkers);
             return;
         }
 
@@ -73,10 +74,10 @@ public class WorkspaceManager
             ? Path.Combine(workspacePath, activeDocumentPath)
             : workspacePath;
 
-        await WriteActiveDocumentToPath(workspacePack, fullSavePath, activeDocumentPath);
+        await WriteActiveDocumentToPath(workspacePack, fullSavePath, activeDocumentPath, activeDocumentMarkers);
     }
 
-    public async Task<(bool success, string? newFilePath)> SaveDocumentAsAsync(LoadedMarkerPack workspacePack, string activeDocumentPath)
+    public async Task<(bool success, string? newFilePath)> SaveDocumentAsAsync(LoadedMarkerPack workspacePack, string activeDocumentPath, ObservableCollection<Marker> activeDocumentMarkers)
     {
         var dialog = new SaveFileDialog
         {
@@ -98,11 +99,11 @@ public class WorkspaceManager
             return (false, null);
         }
 
-        var markersToSave = workspacePack.MarkersByFile[activeDocumentPath];
+        // Use activeDocumentMarkers instead of workspacePack.MarkersByFile[activeDocumentPath]
         workspacePack.UnmanagedPois.TryGetValue(activeDocumentPath, out var unmanagedElements);
 
         var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement));
-        _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
+        _packWriterService.RewritePoisSection(newDoc, activeDocumentMarkers, unmanagedElements ?? Enumerable.Empty<XElement>());
 
         if (await WriteDocumentToDiskAsync(newDoc, newFilePath))
         {
@@ -111,7 +112,7 @@ public class WorkspaceManager
         return (false, null);
     }
 
-    private async Task WriteActiveDocumentToPath(LoadedMarkerPack workspacePack, string saveDiskPath, string sourceKeyForWorkspace)
+    private async Task WriteActiveDocumentToPath(LoadedMarkerPack workspacePack, string saveDiskPath, string sourceKeyForWorkspace, ObservableCollection<Marker> activeDocumentMarkers)
     {
         if (!workspacePack.XmlDocuments.TryGetValue(sourceKeyForWorkspace, out var docToSave))
         {
@@ -121,8 +122,8 @@ public class WorkspaceManager
         }
 
         workspacePack.UnmanagedPois.TryGetValue(sourceKeyForWorkspace, out var unmanagedElements);
-        var markersInOrder = workspacePack.MarkersByFile[sourceKeyForWorkspace];
-        _packWriterService.RewritePoisSection(docToSave, markersInOrder, unmanagedElements ?? Enumerable.Empty<XElement>());
+        // Use activeDocumentMarkers instead of workspacePack.MarkersByFile[sourceKeyForWorkspace]
+        _packWriterService.RewritePoisSection(docToSave, activeDocumentMarkers, unmanagedElements ?? Enumerable.Empty<XElement>());
 
         if (!await WriteDocumentToDiskAsync(docToSave, saveDiskPath))
         {
@@ -131,7 +132,7 @@ public class WorkspaceManager
 
         workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(sourceKeyForWorkspace, StringComparison.OrdinalIgnoreCase));
         workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(sourceKeyForWorkspace, StringComparison.OrdinalIgnoreCase));
-        foreach (var marker in markersInOrder)
+        foreach (var marker in activeDocumentMarkers)
         {
             marker.IsDirty = false;
         }

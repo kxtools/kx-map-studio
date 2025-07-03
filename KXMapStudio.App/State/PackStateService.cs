@@ -187,7 +187,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
             {
                 case MessageBoxResult.Yes:
                     bool saveSuccess = false;
-                    if (IsWorkspaceArchive)
+                    if (IsWorkspaceArchive || (ActiveDocumentPath != null && ActiveDocumentPath.StartsWith("Untitled-")))
                     {
                         await SaveActiveDocumentAsAsync();
                         saveSuccess = !(_workspacePack?.HasUnsavedChangesFor(path) ?? true);
@@ -264,7 +264,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
             return;
         }
 
-        await _workspaceManager.SaveActiveDocumentAsync(_workspacePack, ActiveDocumentPath, WorkspacePath);
+        await _workspaceManager.SaveActiveDocumentAsync(_workspacePack, ActiveDocumentPath, WorkspacePath, ActiveDocumentMarkers);
         OnPropertyChanged(nameof(HasUnsavedChanges));
         
     }
@@ -276,7 +276,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
             return;
         }
 
-        var (success, newFilePath) = await _workspaceManager.SaveDocumentAsAsync(_workspacePack, ActiveDocumentPath);
+        var (success, newFilePath) = await _workspaceManager.SaveDocumentAsAsync(_workspacePack, ActiveDocumentPath, ActiveDocumentMarkers);
 
         if (success)
         {
