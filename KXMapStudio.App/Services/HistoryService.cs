@@ -20,8 +20,9 @@ namespace KXMapStudio.App.Services
         public bool CanUndo => UndoCount > 0;
         public bool CanRedo => RedoCount > 0;
 
-        public void Record(IAction action)
+        public void Do(IAction action)
         {
+            action.Execute();
             _undoStack.Push(action);
             _redoStack.Clear();
             UpdateCounts();

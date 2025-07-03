@@ -97,8 +97,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
             .OrderBy(idx => idx)
             .ToList();
 
-        _markerCrudService.DeleteMarkers(markersToDelete, ActiveDocumentPath!, _workspacePack!);
-        LoadActiveDocumentIntoView(); // Reloads ActiveDocumentMarkers
+        _markerCrudService.DeleteMarkers(markersToDelete, ActiveDocumentPath!, _workspacePack!, this);
 
         // Determine next selection
         if (ActiveDocumentMarkers.Any())
@@ -138,16 +137,14 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public void InsertMarker(Marker newMarker, int insertionIndex)
     {
-        _markerCrudService.InsertMarker(newMarker, insertionIndex, _workspacePack!); 
-        LoadActiveDocumentIntoView();
+        _markerCrudService.InsertMarker(newMarker, insertionIndex, _workspacePack!, this);
         OnPropertyChanged(nameof(HasUnsavedChanges));
         OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
 
     public void AddMarkerFromGame()
     {
-        _markerCrudService.AddMarkerFromGame(ActiveDocumentPath!, _workspacePack!, SelectedCategory?.FullName);
-        LoadActiveDocumentIntoView();
+        _markerCrudService.AddMarkerFromGame(ActiveDocumentPath!, _workspacePack!, SelectedCategory?.FullName, this);
         OnPropertyChanged(nameof(HasUnsavedChanges));
         OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
@@ -342,6 +339,9 @@ public partial class PackStateService : ObservableObject, IPackStateService
         SetWorkspaceState(null, newLoadedPack);
 
         WorkspaceFiles = new ObservableCollection<string> { untitledName };
+        // Clear and add to existing ActiveDocumentMarkers instance
+        ActiveDocumentMarkers.Clear();
+        // No markers to add for a new file, so ActiveDocumentMarkers remains empty
         ActiveDocumentPath = untitledName;
     }
 

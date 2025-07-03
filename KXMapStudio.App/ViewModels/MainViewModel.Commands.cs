@@ -115,7 +115,7 @@ public partial class MainViewModel
     {
         var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Up);
         action.Execute();
-        _historyService.Record(action);
+        _historyService.Do(action);
     }
 
     private bool CanMoveSelectedMarkersUp()
@@ -133,7 +133,7 @@ public partial class MainViewModel
     {
         var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Down);
         action.Execute();
-        _historyService.Record(action);
+        _historyService.Do(action);
     }
 
     private bool CanMoveSelectedMarkersDown()
@@ -167,7 +167,6 @@ public partial class MainViewModel
     private void UndoAction()
     {
         _historyService.Undo();
-        PackState.LoadActiveDocumentIntoView();
         _feedbackService.ShowMessage("Undo successful.");
     }
 

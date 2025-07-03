@@ -69,37 +69,7 @@ public partial class MainViewModel
 
     private void OnActiveDocumentMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.Action == NotifyCollectionChangedAction.Reset)
-        {
-            UpdateMarkersInView();
-        }
-
-        if (e.OldItems != null)
-        {
-            foreach (var item in e.OldItems.OfType<Marker>())
-            {
-                MarkersInView.Remove(item);
-            }
-        }
-
-        if (e.NewItems != null)
-        {
-            if (e.NewStartingIndex > -1)
-            {
-                int index = e.NewStartingIndex;
-                foreach (var item in e.NewItems.OfType<Marker>())
-                {
-                    MarkersInView.Insert(index++, item);
-                }
-            }
-            else
-            {
-                foreach (var item in e.NewItems.OfType<Marker>())
-                {
-                    MarkersInView.Add(item);
-                }
-            }
-        }
+        UpdateMarkersInView();
     }
 
     private void TryUndoLastAddMarker()
