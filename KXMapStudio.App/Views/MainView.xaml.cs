@@ -155,5 +155,17 @@ namespace KXMapStudio.App.Views
         {
             MarkersDataGrid.SelectAll();
         }
+
+        private void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                // Get the selection DIRECTLY from the DataGrid UI element.
+                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+
+                // Call a new method on the ViewModel, passing the actual selection.
+                vm.DeleteMarkers(selectedMarkers);
+            }
+        }
     }
 }

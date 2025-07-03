@@ -32,5 +32,6 @@ public interface IPackStateService : INotifyPropertyChanged
 
     void InsertMarker(Marker newMarker, int insertionIndex);
     void AddMarkerFromGame();
-    void DeleteSelectedMarkers();
+
+    void DeleteMarkers(List<Marker> markersToDelete);
 }

@@ -226,7 +226,7 @@
                                     <Separator/>
                                     <MenuItem Header="Copy GUID" Command="{Binding CopySelectedMarkerGuidCommand}"/>
                                     <Separator/>
-                                    <MenuItem Header="Delete Selected Marker(s)" Command="{Binding DeleteSelectedMarkersCommand}"/>
+                                    <MenuItem Header="Delete Selected Marker(s)" Click="DeleteMenuItem_Click" />
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                         </DataGrid>

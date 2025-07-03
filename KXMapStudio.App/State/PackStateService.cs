@@ -82,6 +82,24 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     #region Marker Orchestration
 
+    public void DeleteMarkers(List<Marker> markersToDelete)
+    {
+        if (markersToDelete.Count == 0 || ActiveDocumentPath == null || _workspacePack == null)
+        {
+            return;
+        }
+
+        // We are now using the list passed directly from the UI, bypassing the potentially desynced collection.
+        var action = new DeleteMarkersAction(_workspacePack, ActiveDocumentPath, markersToDelete);
+
+        if (action.Execute())
+        {
+            _historyService.Record(action);
+            LoadActiveDocumentIntoView();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+    }
+
     public void InsertMarker(Marker newMarker, int insertionIndex)
     {
         if (_workspacePack == null) return;
@@ -90,48 +108,12 @@ public partial class PackStateService : ObservableObject, IPackStateService
         if (action.Execute())
         {
             _historyService.Record(action);
-
-            var list = _workspacePack.MarkersByFile[newMarker.SourceFile];
-            var actualIndex = list.IndexOf(newMarker);
-
-            if (actualIndex != -1)
-            {
-                ActiveDocumentMarkers.Insert(actualIndex, newMarker);
-            }
-            else
-            {
-                // Fallback just in case
-                ActiveDocumentMarkers.Add(newMarker);
-            }
+            // After changing the model, just reload the view from the model.
+            LoadActiveDocumentIntoView();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
     }
 
-    // The ViewModel calls this for deleting.
-    public void DeleteSelectedMarkers()
-    {
-        if (SelectedMarkers.Count == 0 || ActiveDocumentPath == null || _workspacePack == null)
-        {
-            return;
-        }
-
-        var markersToRemove = SelectedMarkers.ToList();
-        var action = new DeleteMarkersAction(_workspacePack, ActiveDocumentPath, markersToRemove);
-
-        if (action.Execute())
-        {
-            _historyService.Record(action);
-
-            foreach (var marker in markersToRemove)
-            {
-                ActiveDocumentMarkers.Remove(marker);
-            }
-            SelectedMarkers.Clear();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
-    }
-
-    // The ViewModel calls this for adding from the game.
     public void AddMarkerFromGame()
     {
         if (ActiveDocumentPath == null || _workspacePack == null || !_mumbleService.IsAvailable)
@@ -152,14 +134,8 @@ public partial class PackStateService : ObservableObject, IPackStateService
         };
         newMarker.EnableChangeTracking();
 
-        // Create the action for appending (-1 index)
-        var action = new AddMarkerAction(_workspacePack, newMarker);
-        if (action.Execute())
-        {
-            _historyService.Record(action);
-            ActiveDocumentMarkers.Add(newMarker); // Append to the UI list
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
+        // Use the append functionality of InsertMarker
+        InsertMarker(newMarker, -1);
     }
 
     #endregion
@@ -406,8 +382,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     private void LoadActiveDocumentIntoView()
     {
-        SelectedMarkers.Clear();
-        SelectedCategory = null;
+        // We need to save and restore the selection across a full reload.
+        var selectedCategory = this.SelectedCategory;
+        // NOTE: We don't save/restore marker selection as it's cleared on delete/add.
+
         ActiveDocumentMarkers.Clear();
 
         if (ActiveDocumentPath == null || _workspacePack == null)
@@ -425,6 +403,9 @@ public partial class PackStateService : ObservableObject, IPackStateService
                 ActiveDocumentMarkers.Add(marker);
             }
         }
+
+        // Restore the category selection.
+        this.SelectedCategory = selectedCategory;
     }
 
     private void ShowLoadPackErrors(PackLoadResult result)

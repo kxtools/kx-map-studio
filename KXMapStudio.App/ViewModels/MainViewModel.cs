@@ -29,7 +29,7 @@ public partial class MainViewModel : ObservableObject
     private IAsyncRelayCommand _closeWorkspaceCommand = null!;
     private IAsyncRelayCommand _saveDocumentCommand = null!;
     private IRelayCommand _addMarkerFromGameCommand = null!;
-    private IRelayCommand _deleteSelectedMarkersCommand = null!;
+    //private IRelayCommand _deleteSelectedMarkersCommand = null!;
     private IRelayCommand _copySelectedMarkerGuidCommand = null!;
     private IRelayCommand _undoCommand = null!;
     private IRelayCommand _redoCommand = null!;
@@ -42,7 +42,6 @@ public partial class MainViewModel : ObservableObject
     private IRelayCommand _openGitHubLinkCommand = null!;
     private IRelayCommand<string> _openLinkCommand = null!;
     private IRelayCommand _insertNewMarkerCommand = null!;
-    private IRelayCommand _selectAllMarkersCommand = null!;
 
     public IRelayCommand SelectCategoryCommand => _selectCategoryCommand;
     public IAsyncRelayCommand OpenFolderCommand => _openFolderCommand;
@@ -50,7 +49,7 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand CloseWorkspaceCommand => _closeWorkspaceCommand;
     public IAsyncRelayCommand SaveDocumentCommand => _saveDocumentCommand;
     public IRelayCommand AddMarkerFromGameCommand => _addMarkerFromGameCommand;
-    public IRelayCommand DeleteSelectedMarkersCommand => _deleteSelectedMarkersCommand;
+    //public IRelayCommand DeleteSelectedMarkersCommand => _deleteSelectedMarkersCommand;
     public IRelayCommand CopySelectedMarkerGuidCommand => _copySelectedMarkerGuidCommand;
     public IRelayCommand UndoCommand => _undoCommand;
     public IRelayCommand RedoCommand => _redoCommand;
@@ -63,7 +62,6 @@ public partial class MainViewModel : ObservableObject
     public IRelayCommand OpenGitHubLinkCommand => _openGitHubLinkCommand;
     public IRelayCommand<string> OpenLinkCommand => _openLinkCommand;
     public IRelayCommand InsertNewMarkerCommand => _insertNewMarkerCommand;
-    public IRelayCommand SelectAllMarkersCommand => _selectAllMarkersCommand;
 
     public IPackStateService PackState { get; }
     public MumbleService MumbleService { get; }
@@ -119,14 +117,12 @@ public partial class MainViewModel : ObservableObject
         _saveAsCommand = new AsyncRelayCommand(PackState.SaveActiveDocumentAsAsync, () => PackState.IsWorkspaceLoaded);
         _moveSelectedMarkersUpCommand = new RelayCommand(MoveSelectedMarkersUp, CanMoveSelectedMarkersUp);
         _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
-        _selectAllMarkersCommand = new RelayCommand(SelectAllMarkers, () => MarkersInView.Any());
         _insertNewMarkerCommand = new RelayCommand(InsertNewMarker, () => PackState.ActiveDocumentPath != null);
         _openFolderCommand = new AsyncRelayCommand(OpenFolderAsync);
         _openFileCommand = new AsyncRelayCommand(OpenFileAsync);
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
         _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges && !PackState.IsWorkspaceArchive);
         _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null && MumbleService.IsAvailable);
-        _deleteSelectedMarkersCommand = new RelayCommand(DeleteSelectedMarkers, () => PackState.SelectedMarkers.Any());
         _copySelectedMarkerGuidCommand = new RelayCommand(CopySelectedMarkerGuid, () => PackState.SelectedMarkers.Count == 1);
         _undoCommand = new RelayCommand(_historyService.Undo, () => _historyService.CanUndo);
         _redoCommand = new RelayCommand(_historyService.Redo, () => _historyService.CanRedo);
@@ -150,6 +146,12 @@ public partial class MainViewModel : ObservableObject
     {
         _globalHotkeyService.AddMarkerHotkeyPressed += (s, e) => AddMarkerFromGameCommand.Execute(null);
         _globalHotkeyService.UndoLastAddHotkeyPressed += (s, e) => TryUndoLastAddMarker();
+    }
+
+    public void DeleteMarkers(List<Marker> markersToDelete)
+    {
+        // Pass the actual list of markers to the service.
+        PackState.DeleteMarkers(markersToDelete);
     }
 
     public string Title
@@ -199,14 +201,14 @@ public partial class MainViewModel : ObservableObject
                 break;
             case nameof(IPackStateService.SelectedCategory):
                 UpdateMarkersInView();
-                SelectAllMarkersCommand.NotifyCanExecuteChanged();
+                //SelectAllMarkersCommand.NotifyCanExecuteChanged();
                 break;
         }
     }
 
     private void OnSelectedMarkersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        DeleteSelectedMarkersCommand.NotifyCanExecuteChanged();
+        //DeleteSelectedMarkersCommand.NotifyCanExecuteChanged();
         CopySelectedMarkerGuidCommand.NotifyCanExecuteChanged();
         MoveSelectedMarkersUpCommand.NotifyCanExecuteChanged();
         MoveSelectedMarkersDownCommand.NotifyCanExecuteChanged();
@@ -312,22 +314,19 @@ public partial class MainViewModel : ObservableObject
     private void AddMarkerFromGame()
     {
         PackState.AddMarkerFromGame();
-        // After adding, we should select the new marker for good UX.
-        // The last marker in the list is the one just added.
-        if (PackState.ActiveDocumentMarkers.Any())
+        // The selection logic is now handled in the service via the dispatcher.
+        // We can simplify this, but let's first review the service.
+        // For now, let's keep the dispatcher logic here as it's a UX concern.
+        Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            var newMarker = PackState.ActiveDocumentMarkers.Last();
-            PackState.SelectedMarkers.Clear();
-            PackState.SelectedMarkers.Add(newMarker);
-        }
+            if (PackState.ActiveDocumentMarkers.Any())
+            {
+                var newMarker = PackState.ActiveDocumentMarkers.Last();
+                PackState.SelectedMarkers.Clear();
+                PackState.SelectedMarkers.Add(newMarker);
+            }
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
-
-    // This command is called by the "Delete" context menu item
-    private void DeleteSelectedMarkers()
-    {
-        PackState.DeleteSelectedMarkers();
-    }
-
 
     private void CopySelectedMarkerGuid()
     {
@@ -487,12 +486,10 @@ public partial class MainViewModel : ObservableObject
         int insertionIndex = 0;
         Marker? selectedMarker = null;
 
-        // Use the master list from the service for all index calculations.
         var markersForFile = PackState.WorkspacePack.MarkersByFile[PackState.ActiveDocumentPath];
 
         if (markersForFile.Any() && PackState.SelectedMarkers.Any())
         {
-            // Find the topmost selected marker.
             selectedMarker = PackState.SelectedMarkers
                 .OrderBy(m => markersForFile.IndexOf(m))
                 .FirstOrDefault();
@@ -500,14 +497,10 @@ public partial class MainViewModel : ObservableObject
             if (selectedMarker != null)
             {
                 insertionIndex = markersForFile.IndexOf(selectedMarker);
-                if (insertionIndex == -1) // Fallback just in case.
-                {
-                    insertionIndex = 0;
-                }
+                if (insertionIndex == -1) { insertionIndex = 0; }
             }
         }
 
-        // Create a new marker, using the selected marker's data as a default.
         var newMarker = new Marker
         {
             Guid = Guid.NewGuid(),
@@ -520,25 +513,13 @@ public partial class MainViewModel : ObservableObject
         };
         newMarker.EnableChangeTracking();
 
-        // *** THE FIX IS HERE: ***
-        // We must call the orchestration method on the PackState service.
         PackState.InsertMarker(newMarker, insertionIndex);
 
-        // For good UX, clear the old selection and select the newly added marker.
-        PackState.SelectedMarkers.Clear();
-        PackState.SelectedMarkers.Add(newMarker);
-    }
-
-    private void SelectAllMarkers()
-    {
-        // First, clear any existing selection to ensure a clean state.
-        PackState.SelectedMarkers.Clear();
-
-        // Add all markers that are currently visible in the DataGrid to the selection.
-        foreach (var marker in MarkersInView)
+        Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            PackState.SelectedMarkers.Add(marker);
-        }
+            PackState.SelectedMarkers.Clear();
+            PackState.SelectedMarkers.Add(newMarker);
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
 }
