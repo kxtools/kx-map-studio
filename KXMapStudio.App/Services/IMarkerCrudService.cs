@@ -1,5 +1,4 @@
-using KXMapStudio.Core;
-using System.Collections.Generic;
+﻿using KXMapStudio.Core;
 
 namespace KXMapStudio.App.Services;
 

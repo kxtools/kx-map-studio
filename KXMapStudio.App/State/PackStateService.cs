@@ -4,7 +4,6 @@ using System.Xml.Linq;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using KXMapStudio.App.Actions;
 using KXMapStudio.App.Services;
 using KXMapStudio.App.Services.Pack;
 using KXMapStudio.Core;

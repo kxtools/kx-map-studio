@@ -1,6 +1,5 @@
-using KXMapStudio.App.Actions;
+﻿using KXMapStudio.App.Actions;
 using KXMapStudio.Core;
-using System.Collections.Generic;
 
 namespace KXMapStudio.App.Services;
 
@@ -32,7 +31,10 @@ public class MarkerCrudService : IMarkerCrudService
 
     public void InsertMarker(Marker newMarker, int insertionIndex, LoadedMarkerPack workspacePack)
     {
-        if (workspacePack == null) return;
+        if (workspacePack == null)
+        {
+            return;
+        }
 
         var action = new AddMarkerAction(workspacePack, newMarker, insertionIndex);
         if (action.Execute())

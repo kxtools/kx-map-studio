@@ -85,7 +85,10 @@ public class WorkspaceManager
             FileName = activeDocumentPath.StartsWith("Untitled") ? "MyRoute.xml" : Path.GetFileName(activeDocumentPath)
         };
 
-        if (dialog.ShowDialog() != true) return (false, null);
+        if (dialog.ShowDialog() != true)
+        {
+            return (false, null);
+        }
 
         var newFilePath = dialog.FileName;
 
