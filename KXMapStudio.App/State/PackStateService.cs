@@ -85,8 +85,53 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public void DeleteMarkers(List<Marker> markersToDelete)
     {
+        if (markersToDelete == null || !markersToDelete.Any() || ActiveDocumentPath == null || _workspacePack == null)
+        {
+            return;
+        }
+
+        // Capture original indices before deletion
+        var originalIndices = markersToDelete
+            .Select(m => ActiveDocumentMarkers.IndexOf(m))
+            .Where(idx => idx != -1) // Ensure marker is actually in the current view
+            .OrderBy(idx => idx)
+            .ToList();
+
         _markerCrudService.DeleteMarkers(markersToDelete, ActiveDocumentPath!, _workspacePack!);
-        LoadActiveDocumentIntoView();
+        LoadActiveDocumentIntoView(); // Reloads ActiveDocumentMarkers
+
+        // Determine next selection
+        if (ActiveDocumentMarkers.Any())
+        {
+            Marker? nextSelection = null;
+            // Try to select the marker immediately after the last deleted marker
+            var lastDeletedOriginalIndex = originalIndices.LastOrDefault();
+            if (lastDeletedOriginalIndex != -1 && lastDeletedOriginalIndex < ActiveDocumentMarkers.Count)
+            {
+                nextSelection = ActiveDocumentMarkers[lastDeletedOriginalIndex];
+            }
+            // If no marker after, try to select the one before the first deleted marker
+            else if (originalIndices.Any() && originalIndices.First() > 0)
+            {
+                nextSelection = ActiveDocumentMarkers[originalIndices.First() - 1];
+            }
+            // Fallback to first item if nothing else works
+            else
+            {
+                nextSelection = ActiveDocumentMarkers.FirstOrDefault();
+            }
+
+            SelectedMarkers.Clear();
+            if (nextSelection != null) 
+            {
+                SelectedMarkers.Add(nextSelection);
+            }
+        }
+        else
+        {
+            SelectedMarkers.Clear();
+        }
+
         OnPropertyChanged(nameof(HasUnsavedChanges));
         OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
