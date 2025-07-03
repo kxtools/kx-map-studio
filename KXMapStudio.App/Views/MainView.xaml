@@ -221,10 +221,10 @@
                                     <MenuItem Header="Insert New Marker Here" InputGestureText="Ctrl+I" Click="InsertMenuItem_Click" />
                                     <Separator/>
                                     <MenuItem Header="Select All" InputGestureText="Ctrl+A" Click="SelectAllMenuItem_Click" />
-                                    <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up" />
-                                    <MenuItem Header="Move Down" Command="{Binding MoveSelectedMarkersDownCommand}" InputGestureText="Alt+Down" />
+                                    <MenuItem Header="Move Up" InputGestureText="Alt+Up" Click="MoveUpMenuItem_Click" />
+                                    <MenuItem Header="Move Down" InputGestureText="Alt+Down" Click="MoveDownMenuItem_Click" />
                                     <Separator/>
-                                    <MenuItem Header="Copy GUID" Command="{Binding CopySelectedMarkerGuidCommand}"/>
+                                    <MenuItem Header="Copy GUID" Click="CopyGuidMenuItem_Click" />
                                     <Separator/>
                                     <MenuItem Header="Delete Selected Marker(s)" Click="DeleteMenuItem_Click" />
                                 </ContextMenu>

@@ -160,5 +160,32 @@ namespace KXMapStudio.App.Views
                 vm.InsertNewMarker(selectedMarkers);
             }
         }
+
+        private void MoveUpMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+                vm.MoveMarkersUp(selectedMarkers);
+            }
+        }
+
+        private void MoveDownMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+                vm.MoveMarkersDown(selectedMarkers);
+            }
+        }
+
+        private void CopyGuidMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+                vm.CopySelectedMarkerGuid(selectedMarkers);
+            }
+        }
     }
 }

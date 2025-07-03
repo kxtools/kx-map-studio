@@ -113,8 +113,11 @@ public partial class MainViewModel : ObservableObject
         _selectCategoryCommand = new RelayCommand<object>(HandleSelectCategory);
         _newFileCommand = new AsyncRelayCommand(PackState.NewFileAsync);
         _saveAsCommand = new AsyncRelayCommand(PackState.SaveActiveDocumentAsAsync, () => PackState.IsWorkspaceLoaded);
-        _moveSelectedMarkersUpCommand = new RelayCommand(MoveSelectedMarkersUp, CanMoveSelectedMarkersUp);
-        _moveSelectedMarkersDownCommand = new RelayCommand(MoveSelectedMarkersDown, CanMoveSelectedMarkersDown);
+
+        _moveSelectedMarkersUpCommand = new RelayCommand(() => MoveMarkersUp(PackState.SelectedMarkers.ToList()), () => CanMoveSelectedMarkersUp());
+        _moveSelectedMarkersDownCommand = new RelayCommand(() => MoveMarkersDown(PackState.SelectedMarkers.ToList()), () => CanMoveSelectedMarkersDown());
+        _copySelectedMarkerGuidCommand = new RelayCommand(() => CopySelectedMarkerGuid(PackState.SelectedMarkers.ToList()), () => PackState.SelectedMarkers.Count == 1);
+
         _insertNewMarkerCommand = new RelayCommand(
             () => InsertNewMarker(PackState.SelectedMarkers.ToList()),
             () => PackState.ActiveDocumentPath != null);
@@ -123,7 +126,6 @@ public partial class MainViewModel : ObservableObject
         _closeWorkspaceCommand = new AsyncRelayCommand(CloseWorkspaceAsync, () => PackState.IsWorkspaceLoaded);
         _saveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync, () => PackState.HasUnsavedChanges && !PackState.IsWorkspaceArchive);
         _addMarkerFromGameCommand = new RelayCommand(AddMarkerFromGame, () => PackState.ActiveDocumentPath != null && MumbleService.IsAvailable);
-        _copySelectedMarkerGuidCommand = new RelayCommand(CopySelectedMarkerGuid, () => PackState.SelectedMarkers.Count == 1);
         _undoCommand = new RelayCommand(_historyService.Undo, () => _historyService.CanUndo);
         _redoCommand = new RelayCommand(_historyService.Redo, () => _historyService.CanRedo);
 
@@ -322,14 +324,16 @@ public partial class MainViewModel : ObservableObject
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
-    private void CopySelectedMarkerGuid()
+    public void CopySelectedMarkerGuid(List<Marker> selectedMarkers)
     {
-        if (PackState.SelectedMarkers.Count != 1)
+        if (selectedMarkers.Count != 1)
         {
+            // Maybe provide feedback that you can only copy one at a time.
+            _feedbackService.ShowMessage("Please select a single marker to copy its GUID.", "OK");
             return;
         }
 
-        var guid = PackState.SelectedMarkers.First().GuidFormatted;
+        var guid = selectedMarkers.First().GuidFormatted;
         Clipboard.SetText(guid);
         _feedbackService.ShowMessage($"Copied GUID: {guid}", "DISMISS");
     }
@@ -342,10 +346,10 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void MoveSelectedMarkersUp()
+    public void MoveMarkersUp(List<Marker> markersToMove)
     {
-        var selection = new List<Marker>(PackState.SelectedMarkers);
-        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, selection, ReorderDirection.Up);
+        // The action now receives the explicit list, not the potentially stale collection.
+        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Up);
         action.Execute();
         _historyService.Record(action);
     }
@@ -361,10 +365,9 @@ public partial class MainViewModel : ObservableObject
         return minIndex > 0;
     }
 
-    private void MoveSelectedMarkersDown()
+    public void MoveMarkersDown(List<Marker> markersToMove)
     {
-        var selection = new List<Marker>(PackState.SelectedMarkers);
-        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, selection, ReorderDirection.Down);
+        var action = new ReorderMarkersAction(PackState.ActiveDocumentMarkers, markersToMove, ReorderDirection.Down);
         action.Execute();
         _historyService.Record(action);
     }
