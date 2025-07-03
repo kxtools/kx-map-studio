@@ -1,6 +1,4 @@
-﻿using Gw2Sharp.Mumble;
-
-using KXMapStudio.App.Actions;
+﻿using KXMapStudio.App.Actions;
 using KXMapStudio.App.State;
 using KXMapStudio.Core;
 

@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Windows;
 using System.Xml.Linq;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,11 +13,11 @@ namespace KXMapStudio.App.State;
 
 public partial class PackStateService : ObservableObject, IPackStateService
 {
-    
+
     private readonly ILogger<PackStateService> _logger;
     private readonly WorkspaceManager _workspaceManager;
     private readonly IMarkerCrudService _markerCrudService;
-    
+
 
     private LoadedMarkerPack? _workspacePack;
 
@@ -61,6 +60,8 @@ public partial class PackStateService : ObservableObject, IPackStateService
     public bool IsActiveDocumentDirty => _workspacePack?.HasUnsavedChangesFor(ActiveDocumentPath) ?? false;
 
     private readonly IFeedbackService _feedbackService;
+    private readonly ISavePromptService _savePromptService;
+    private readonly IDirtyStateTracker _dirtyStateTracker;
 
     private readonly MarkerXmlParser _markerXmlParser;
     private readonly CategoryBuilder _categoryBuilder;
@@ -70,6 +71,8 @@ public partial class PackStateService : ObservableObject, IPackStateService
         ILogger<PackStateService> logger,
         WorkspaceManager workspaceManager,
         IFeedbackService feedbackService,
+        ISavePromptService savePromptService,
+        IDirtyStateTracker dirtyStateTracker,
         MarkerXmlParser markerXmlParser,
         CategoryBuilder categoryBuilder)
     {
@@ -77,6 +80,8 @@ public partial class PackStateService : ObservableObject, IPackStateService
         _logger = logger;
         _workspaceManager = workspaceManager;
         _feedbackService = feedbackService;
+        _savePromptService = savePromptService;
+        _dirtyStateTracker = dirtyStateTracker;
         _markerXmlParser = markerXmlParser;
         _categoryBuilder = categoryBuilder;
     }
@@ -121,7 +126,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
             }
 
             SelectedMarkers.Clear();
-            if (nextSelection != null) 
+            if (nextSelection != null)
             {
                 SelectedMarkers.Add(nextSelection);
             }
@@ -155,69 +160,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public async Task<bool> CheckAndPromptToSaveChanges()
     {
-        if (_workspacePack == null)
-        {
-            return true;
-        }
-
-        var unsavedPaths = _workspacePack.GetUnsavedDocumentPaths().ToList();
-        if (!unsavedPaths.Any())
-        {
-            return true;
-        }
-
-        foreach (var path in unsavedPaths)
-        {
-            SetAndLoadDocument(path);
-
-            string message;
-            MessageBoxResult result;
-            if (IsWorkspaceArchive)
-            {
-                message = $"You have unsaved changes in '{path}' (from a read-only archive). Would you like to save a copy?";
-                result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-            }
-            else
-            {
-                message = $"You have unsaved changes in '{path}'. Would you like to save them?";
-                result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-            }
-
-            switch (result)
-            {
-                case MessageBoxResult.Yes:
-                    bool saveSuccess = false;
-                    if (IsWorkspaceArchive || (ActiveDocumentPath != null && ActiveDocumentPath.StartsWith("Untitled-")))
-                    {
-                        await SaveActiveDocumentAsAsync();
-                        saveSuccess = !(_workspacePack?.HasUnsavedChangesFor(path) ?? true);
-                    }
-                    else
-                    {
-                        await SaveActiveDocumentAsync();
-                        saveSuccess = !(_workspacePack?.HasUnsavedChangesFor(path) ?? true);
-                    }
-
-                    if (!saveSuccess)
-                    {
-                        return false;
-                    }
-                    break;
-                case MessageBoxResult.No:
-                    if (_workspacePack != null)
-                    {
-                        RevertDocumentChanges(path);
-                    }
-                    OnPropertyChanged(nameof(HasUnsavedChanges));
-                    OnPropertyChanged(nameof(IsActiveDocumentDirty));
-                    continue;
-                case MessageBoxResult.Cancel:
-                default:
-                    return false;
-            }
-        }
-
-        return true;
+        return await _savePromptService.PromptToSaveChanges(this);
     }
 
     public async Task OpenWorkspaceAsync(string path)
@@ -237,6 +180,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
             SetWorkspaceState(workspacePath, pack);
             WorkspaceFiles = new ObservableCollection<string>(_workspacePack!.XmlDocuments.Keys.OrderBy(k => k));
             ActiveDocumentPath = WorkspaceFiles.FirstOrDefault();
+            _dirtyStateTracker.StartTracking(ActiveDocumentMarkers, this);
         }
         else
         {
@@ -253,8 +197,44 @@ public partial class PackStateService : ObservableObject, IPackStateService
             return;
         }
 
+        _dirtyStateTracker.StopTracking(ActiveDocumentMarkers);
         CloseWorkspaceInternal();
         SetWorkspaceState(null, null);
+    }
+
+    public async Task NewFileAsync()
+    {
+        if (!await CheckAndPromptToSaveChanges())
+        {
+            return;
+        }
+
+        _dirtyStateTracker.StopTracking(ActiveDocumentMarkers);
+        CloseWorkspaceInternal();
+
+
+        _logger.LogInformation("Creating a new untitled file.");
+        var untitledName = $"Untitled-{DateTime.Now:yyyyMMddHHmmss}.xml";
+
+        var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement, new XElement(TacoXmlConstants.PoisElement)));
+
+        var newLoadedPack = new LoadedMarkerPack
+        {
+            FilePath = string.Empty,
+            IsArchive = false,
+            RootCategory = new Category { InternalName = "root", DisplayName = untitledName },
+            OriginalRawContent = new Dictionary<string, byte[]>(),
+            XmlDocuments = new Dictionary<string, XDocument> { { untitledName, newDoc } },
+            MarkersByFile = new Dictionary<string, List<Marker>> { { untitledName, new List<Marker>() } }
+        };
+        SetWorkspaceState(null, newLoadedPack);
+
+        WorkspaceFiles = new ObservableCollection<string> { untitledName };
+        // Clear and add to existing ActiveDocumentMarkers instance
+        ActiveDocumentMarkers.Clear();
+        // No markers to add for a new file, so ActiveDocumentMarkers remains empty
+        ActiveDocumentPath = untitledName;
+        _dirtyStateTracker.StartTracking(ActiveDocumentMarkers, this);
     }
 
     public async Task SaveActiveDocumentAsync()
@@ -272,7 +252,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
         await _workspaceManager.SaveActiveDocumentAsync(_workspacePack, ActiveDocumentPath, WorkspacePath, ActiveDocumentMarkers);
         OnPropertyChanged(nameof(HasUnsavedChanges));
-        
+
     }
 
     public async Task SaveActiveDocumentAsAsync()
@@ -318,44 +298,57 @@ public partial class PackStateService : ObservableObject, IPackStateService
         }
     }
 
-    public async Task NewFileAsync()
-    {
-        if (!await CheckAndPromptToSaveChanges())
-        {
-            return;
-        }
-
-        CloseWorkspaceInternal();
-        
-
-        _logger.LogInformation("Creating a new untitled file.");
-        var untitledName = $"Untitled-{DateTime.Now:yyyyMMddHHmmss}.xml";
-
-        var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement, new XElement(TacoXmlConstants.PoisElement)));
-
-        var newLoadedPack = new LoadedMarkerPack
-        {
-            FilePath = string.Empty,
-            IsArchive = false,
-            RootCategory = new Category { InternalName = "root", DisplayName = untitledName },
-            OriginalRawContent = new Dictionary<string, byte[]>(),
-            XmlDocuments = new Dictionary<string, XDocument> { { untitledName, newDoc } },
-            MarkersByFile = new Dictionary<string, List<Marker>> { { untitledName, new List<Marker>() } }
-        };
-        SetWorkspaceState(null, newLoadedPack);
-
-        WorkspaceFiles = new ObservableCollection<string> { untitledName };
-        // Clear and add to existing ActiveDocumentMarkers instance
-        ActiveDocumentMarkers.Clear();
-        // No markers to add for a new file, so ActiveDocumentMarkers remains empty
-        ActiveDocumentPath = untitledName;
-    }
-
     #endregion
 
     #region Private Helpers
 
-    private void RevertDocumentChanges(string documentPath)
+    private void SetAndLoadDocument(string? newPath)
+    {
+        if (SetProperty(ref _activeDocumentPath, newPath, nameof(ActiveDocumentPath)))
+        {
+            _logger.LogInformation("Activating document: {DocumentPath}", newPath);
+            LoadActiveDocumentIntoView();
+        }
+    }
+
+    public void LoadActiveDocumentIntoView()
+    {
+        var selectedCategory = this.SelectedCategory;
+
+        // Stop tracking old markers before clearing
+        _dirtyStateTracker.StopTracking(ActiveDocumentMarkers);
+
+        ActiveDocumentMarkers.Clear();
+
+        if (ActiveDocumentPath == null || _workspacePack == null)
+        {
+            ActiveRootCategory = null;
+            return;
+        }
+
+        ActiveRootCategory = _workspacePack.RootCategory;
+
+        if (_workspacePack.MarkersByFile.TryGetValue(ActiveDocumentPath, out var markersForThisDoc))
+        {
+            foreach (var marker in markersForThisDoc)
+            {
+                ActiveDocumentMarkers.Add(marker);
+            }
+        }
+
+        // Start tracking new markers after populating
+        _dirtyStateTracker.StartTracking(ActiveDocumentMarkers, this);
+
+        this.SelectedCategory = selectedCategory;
+    }
+
+    public void UpdateDirtyState()
+    {
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
+    }
+
+    public void RevertDocumentChanges(string documentPath)
     {
         if (_workspacePack == null || !_workspacePack.OriginalRawContent.TryGetValue(documentPath, out var originalBytes))
         {
@@ -377,80 +370,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         LoadActiveDocumentIntoView();
         OnPropertyChanged(nameof(HasUnsavedChanges));
         OnPropertyChanged(nameof(IsActiveDocumentDirty));
-    }
-
-    private void SetAndLoadDocument(string? newPath)
-    {
-        if (SetProperty(ref _activeDocumentPath, newPath, nameof(ActiveDocumentPath)))
-        {
-            _logger.LogInformation("Activating document: {DocumentPath}", newPath);
-            LoadActiveDocumentIntoView();
-        }
-    }
-
-    public void LoadActiveDocumentIntoView()
-    {
-        var selectedCategory = this.SelectedCategory;
-
-        // Unsubscribe from old markers before clearing
-        foreach (var marker in ActiveDocumentMarkers)
-        {
-            marker.PropertyChanged -= OnMarkerPropertyChanged;
-        }
-
-        ActiveDocumentMarkers.Clear();
-
-        if (ActiveDocumentPath == null || _workspacePack == null)
-        {
-            ActiveRootCategory = null;
-            return;
-        }
-
-        ActiveRootCategory = _workspacePack.RootCategory;
-
-        if (_workspacePack.MarkersByFile.TryGetValue(ActiveDocumentPath, out var markersForThisDoc))
-        {
-            foreach (var marker in markersForThisDoc)
-            {
-                ActiveDocumentMarkers.Add(marker);
-                marker.PropertyChanged += OnMarkerPropertyChanged; // Subscribe to new markers
-            }
-        }
-
-        this.SelectedCategory = selectedCategory;
-    }
-
-    private void OnMarkerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(Marker.IsDirty))
-        {
-            // Only update if the dirty state actually changed and it's for the active document
-            if (sender is Marker marker && marker.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase))
-            {
-                OnPropertyChanged(nameof(IsActiveDocumentDirty));
-                OnPropertyChanged(nameof(HasUnsavedChanges));
-            }
-        }
-    }
-
-    private void CloseWorkspaceInternal()
-    {
-        _workspacePack = null;
-        WorkspacePath = null;
-        ActiveDocumentPath = null;
-        WorkspaceFiles.Clear();
-        ActiveDocumentMarkers.Clear();
-        SelectedMarkers.Clear();
-        SelectedCategory = null;
-    }
-
-    private void SetWorkspaceState(string? workspacePath, LoadedMarkerPack? pack)
-    {
-        _workspacePack = pack;
-        IsWorkspaceLoaded = pack != null;
-        WorkspacePath = workspacePath;
-        OnPropertyChanged(nameof(HasUnsavedChanges));
-        OnPropertyChanged(nameof(IsWorkspaceArchive));
     }
 
     #endregion

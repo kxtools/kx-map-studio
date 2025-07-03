@@ -36,4 +36,6 @@ public interface IPackStateService : INotifyPropertyChanged
 
     void DeleteMarkers(List<Marker> markersToDelete);
     void LoadActiveDocumentIntoView();
+    void UpdateDirtyState();
+    void RevertDocumentChanges(string documentPath);
 }

@@ -44,6 +44,8 @@ namespace KXMapStudio.App
                     services.AddSingleton(new SnackbarMessageQueue());
                     services.AddSingleton<ISnackbarMessageQueue>(sp => sp.GetRequiredService<SnackbarMessageQueue>());
                     services.AddSingleton<IFeedbackService, SnackbarFeedbackService>();
+                    services.AddSingleton<ISavePromptService, SavePromptService>();
+                    services.AddSingleton<IDirtyStateTracker, DirtyStateTracker>();
 
                     services.AddSingleton<HistoryService>();
                     services.AddSingleton<GlobalHotkeyService>();
@@ -63,6 +65,8 @@ namespace KXMapStudio.App
                             sp.GetRequiredService<ILogger<PackStateService>>(),
                             sp.GetRequiredService<WorkspaceManager>(),
                             sp.GetRequiredService<IFeedbackService>(),
+                            sp.GetRequiredService<ISavePromptService>(),
+                            sp.GetRequiredService<IDirtyStateTracker>(),
                             sp.GetRequiredService<MarkerXmlParser>(),
                             sp.GetRequiredService<CategoryBuilder>()));
                 })
