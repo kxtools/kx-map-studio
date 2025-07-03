@@ -18,7 +18,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
     private readonly HistoryService _historyService;
     private readonly ILogger<PackStateService> _logger;
     private readonly WorkspaceManager _workspaceManager;
-    private int _newFileCounter = 0;
+    
 
     private LoadedMarkerPack? _workspacePack;
 
@@ -151,21 +151,22 @@ public partial class PackStateService : ObservableObject, IPackStateService
             SetAndLoadDocument(path);
 
             string message;
+            MessageBoxResult result;
             if (IsWorkspaceArchive)
             {
-                message = $"You have unsaved changes in '{path}' (from an archive). Would you like to save a copy?";
+                message = $"You have unsaved changes in '{path}' (from a read-only archive). Would you like to save a copy?";
+                result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
             }
             else
             {
                 message = $"You have unsaved changes in '{path}'. Would you like to save them?";
+                result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
             }
-
-            var result = MessageBox.Show(message, "Unsaved Changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
 
             switch (result)
             {
                 case MessageBoxResult.Yes:
-                    bool saveSuccess;
+                    bool saveSuccess = false;
                     if (IsWorkspaceArchive)
                     {
                         await SaveActiveDocumentAsAsync();
@@ -262,9 +263,21 @@ public partial class PackStateService : ObservableObject, IPackStateService
             return;
         }
 
-        await _workspaceManager.SaveActiveDocumentAsAsync(_workspacePack, ActiveDocumentPath);
-        OnPropertyChanged(nameof(HasUnsavedChanges));
-        _historyService.Clear();
+        if (await _workspaceManager.SaveDocumentAsAsync(_workspacePack, ActiveDocumentPath))
+        {
+            _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
+            _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(ActiveDocumentPath, StringComparison.OrdinalIgnoreCase));
+            if (_workspacePack.MarkersByFile.TryGetValue(ActiveDocumentPath, out var markers))
+            {
+                foreach (var marker in markers)
+                {
+                    marker.IsDirty = false;
+                }
+            }
+
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            _historyService.Clear();
+        }
     }
 
     public async Task NewFileAsync()
@@ -275,10 +288,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
         }
 
         CloseWorkspaceInternal();
-        _newFileCounter++;
+        
 
         _logger.LogInformation("Creating a new untitled file.");
-        var untitledName = $"Untitled-{_newFileCounter}.xml";
+        var untitledName = $"Untitled-{DateTime.Now:yyyyMMddHHmmss}.xml";
 
         var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement, new XElement(TacoXmlConstants.PoisElement)));
 

@@ -58,7 +58,7 @@ public class WorkspaceManager
     {
         if (activeDocumentPath.StartsWith("Untitled"))
         {
-            await SaveActiveDocumentAsAsync(workspacePack, activeDocumentPath);
+            await SaveDocumentAsAsync(workspacePack, activeDocumentPath);
             return;
         }
 
@@ -76,7 +76,7 @@ public class WorkspaceManager
         await WriteActiveDocumentToPath(workspacePack, fullSavePath, activeDocumentPath);
     }
 
-    public async Task SaveActiveDocumentAsAsync(LoadedMarkerPack workspacePack, string activeDocumentPath)
+    public async Task<bool> SaveDocumentAsAsync(LoadedMarkerPack workspacePack, string activeDocumentPath)
     {
         var dialog = new SaveFileDialog
         {
@@ -87,7 +87,7 @@ public class WorkspaceManager
 
         if (dialog.ShowDialog() != true)
         {
-            return;
+            return false;
         }
 
         var newFilePath = dialog.FileName;
@@ -95,7 +95,7 @@ public class WorkspaceManager
         if (Path.GetExtension(newFilePath).ToLowerInvariant() is ".taco" or ".zip")
         {
             _dialogService.ShowError("Invalid Save Location", "Saving directly into a .taco or .zip archive is not supported. Please save as a standard .xml file.");
-            return;
+            return false;
         }
 
         var markersToSave = workspacePack.MarkersByFile[activeDocumentPath];
@@ -104,12 +104,7 @@ public class WorkspaceManager
         var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement));
         _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
 
-        if (!await WriteDocumentToDiskAsync(newDoc, newFilePath))
-        {
-            return;
-        }
-
-        _logger.LogInformation("File saved as '{newFilePath}' and workspace context has been reset to a single-file mode.", newFilePath);
+        return await WriteDocumentToDiskAsync(newDoc, newFilePath);
     }
 
     private async Task WriteActiveDocumentToPath(LoadedMarkerPack workspacePack, string saveDiskPath, string sourceKeyForWorkspace)
