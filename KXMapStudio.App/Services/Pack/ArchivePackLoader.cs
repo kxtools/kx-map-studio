@@ -7,6 +7,15 @@ namespace KXMapStudio.App.Services.Pack;
 
 public class ArchivePackLoader : IPackLoader
 {
+    private readonly MarkerXmlParser _markerXmlParser;
+    private readonly CategoryBuilder _categoryBuilder;
+
+    public ArchivePackLoader(MarkerXmlParser markerXmlParser, CategoryBuilder categoryBuilder)
+    {
+        _markerXmlParser = markerXmlParser;
+        _categoryBuilder = categoryBuilder;
+    }
+
     public async Task<PackLoadResult> LoadPackAsync(string path)
     {
         var originalRawContent = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
@@ -27,7 +36,7 @@ public class ArchivePackLoader : IPackLoader
             }
         }
 
-        var packLoader = new PackLoader();
+        var packLoader = new PackLoader(_markerXmlParser, _categoryBuilder);
         return await packLoader.LoadPackFromMemoryAsync(originalRawContent, path, true);
     }
 }

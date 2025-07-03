@@ -15,10 +15,10 @@ namespace KXMapStudio.App.State;
 
 public partial class PackStateService : ObservableObject, IPackStateService
 {
-    private readonly MumbleService _mumbleService;
-    private readonly HistoryService _historyService;
+    
     private readonly ILogger<PackStateService> _logger;
     private readonly WorkspaceManager _workspaceManager;
+    private readonly IMarkerCrudService _markerCrudService;
     
 
     private LoadedMarkerPack? _workspacePack;
@@ -63,76 +63,49 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     private readonly IFeedbackService _feedbackService;
 
+    private readonly MarkerXmlParser _markerXmlParser;
+    private readonly CategoryBuilder _categoryBuilder;
+
     public PackStateService(
-        MumbleService mumbleService,
-        HistoryService historyService,
+        IMarkerCrudService markerCrudService,
         ILogger<PackStateService> logger,
         WorkspaceManager workspaceManager,
-        IFeedbackService feedbackService)
+        IFeedbackService feedbackService,
+        MarkerXmlParser markerXmlParser,
+        CategoryBuilder categoryBuilder)
     {
-        _mumbleService = mumbleService;
-        _historyService = historyService;
+        _markerCrudService = markerCrudService;
         _logger = logger;
         _workspaceManager = workspaceManager;
         _feedbackService = feedbackService;
+        _markerXmlParser = markerXmlParser;
+        _categoryBuilder = categoryBuilder;
     }
 
     #region Marker Orchestration
 
     public void DeleteMarkers(List<Marker> markersToDelete)
     {
-        if (markersToDelete.Count == 0 || ActiveDocumentPath == null || _workspacePack == null)
-        {
-            return;
-        }
-
-        var action = new DeleteMarkersAction(_workspacePack, ActiveDocumentPath, markersToDelete);
-
-        if (action.Execute())
-        {
-            _historyService.Record(action);
-            LoadActiveDocumentIntoView();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
+        _markerCrudService.DeleteMarkers(markersToDelete, ActiveDocumentPath!, _workspacePack!);
+        LoadActiveDocumentIntoView();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
 
     public void InsertMarker(Marker newMarker, int insertionIndex)
     {
-        if (_workspacePack == null)
-        {
-            return;
-        }
-
-        var action = new AddMarkerAction(_workspacePack, newMarker, insertionIndex);
-        if (action.Execute())
-        {
-            _historyService.Record(action);
-            LoadActiveDocumentIntoView();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
+        _markerCrudService.InsertMarker(newMarker, insertionIndex, _workspacePack!); 
+        LoadActiveDocumentIntoView();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
 
     public void AddMarkerFromGame()
     {
-        if (ActiveDocumentPath == null || _workspacePack == null || !_mumbleService.IsAvailable)
-        {
-            return;
-        }
-
-        string markerType = SelectedCategory?.FullName ?? string.Empty;
-        var newMarker = new Marker
-        {
-            Guid = Guid.NewGuid(),
-            MapId = (int)_mumbleService.CurrentMapId,
-            X = _mumbleService.PlayerPosition.X,
-            Y = _mumbleService.PlayerPosition.Y,
-            Z = _mumbleService.PlayerPosition.Z,
-            Type = markerType,
-            SourceFile = ActiveDocumentPath,
-        };
-        newMarker.EnableChangeTracking();
-
-        InsertMarker(newMarker, -1);
+        _markerCrudService.AddMarkerFromGame(ActiveDocumentPath!, _workspacePack!, SelectedCategory?.FullName);
+        LoadActiveDocumentIntoView();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(IsActiveDocumentDirty));
     }
 
     #endregion
@@ -252,7 +225,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
         await _workspaceManager.SaveActiveDocumentAsync(_workspacePack, ActiveDocumentPath, WorkspacePath);
         OnPropertyChanged(nameof(HasUnsavedChanges));
-        _historyService.Clear();
+        
     }
 
     public async Task SaveActiveDocumentAsAsync()
@@ -294,7 +267,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(IsActiveDocumentDirty));
-            _historyService.Clear();
             _feedbackService.ShowMessage("A copy was saved successfully. You are still working in the original workspace.");
         }
     }
@@ -344,7 +316,7 @@ public partial class PackStateService : ObservableObject, IPackStateService
         _workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(documentPath, StringComparison.OrdinalIgnoreCase));
         _workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(documentPath, StringComparison.OrdinalIgnoreCase));
 
-        var packLoader = new PackLoader();
+        var packLoader = new PackLoader(_markerXmlParser, _categoryBuilder);
         var result = packLoader.LoadPackFromMemoryAsync(new Dictionary<string, byte[]> { { documentPath, originalBytes } }, _workspacePack.FilePath, _workspacePack.IsArchive).Result;
 
         if (result.LoadedPack != null && result.LoadedPack.MarkersByFile.TryGetValue(documentPath, out var revertedMarkers))
@@ -363,8 +335,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         {
             _logger.LogInformation("Activating document: {DocumentPath}", newPath);
             LoadActiveDocumentIntoView();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            _historyService.Clear();
         }
     }
 
@@ -401,7 +371,6 @@ public partial class PackStateService : ObservableObject, IPackStateService
         ActiveDocumentMarkers.Clear();
         SelectedMarkers.Clear();
         SelectedCategory = null;
-        _historyService.Clear();
     }
 
     private void SetWorkspaceState(string? workspacePath, LoadedMarkerPack? pack)

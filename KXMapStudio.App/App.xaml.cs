@@ -49,16 +49,22 @@ namespace KXMapStudio.App
                     services.AddSingleton<GlobalHotkeyService>();
                     services.AddSingleton<UpdateService>();
 
+                    services.AddSingleton<MarkerXmlParser>();
+                    services.AddSingleton<CategoryBuilder>();
+                    services.AddSingleton<PackLoader>();
                     services.AddSingleton<PackLoaderFactory>();
                     services.AddSingleton<WorkspaceManager>();
 
+                    services.AddSingleton<IMarkerCrudService, MarkerCrudService>();
+
                     services.AddSingleton<IPackStateService, PackStateService>(sp =>
                         new PackStateService(
-                            sp.GetRequiredService<MumbleService>(),
-                            sp.GetRequiredService<HistoryService>(),
+                            sp.GetRequiredService<IMarkerCrudService>(),
                             sp.GetRequiredService<ILogger<PackStateService>>(),
                             sp.GetRequiredService<WorkspaceManager>(),
-                            sp.GetRequiredService<IFeedbackService>()));
+                            sp.GetRequiredService<IFeedbackService>(),
+                            sp.GetRequiredService<MarkerXmlParser>(),
+                            sp.GetRequiredService<CategoryBuilder>()));
                 })
                 .Build();
         }

@@ -1,14 +1,23 @@
 ﻿using KXMapStudio.Core;
-using KXMapStudio.Core.Utilities;
-
-using System.Globalization;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace KXMapStudio.App.Services.Pack;
 
 public class PackLoader
 {
+    private readonly MarkerXmlParser _markerXmlParser;
+    private readonly CategoryBuilder _categoryBuilder;
+
+    public PackLoader(MarkerXmlParser markerXmlParser, CategoryBuilder categoryBuilder)
+    {
+        _markerXmlParser = markerXmlParser;
+        _categoryBuilder = categoryBuilder;
+    }
+
     public async Task<PackLoadResult> LoadPackFromMemoryAsync(Dictionary<string, byte[]> originalRawContent, string path, bool isArchive)
     {
         var xmlDocuments = new Dictionary<string, XDocument>(StringComparer.OrdinalIgnoreCase);
@@ -51,7 +60,7 @@ public class PackLoader
                     {
                         if (element.Name.LocalName.Equals(TacoXmlConstants.PoiElement, StringComparison.OrdinalIgnoreCase))
                         {
-                            var marker = CreateMarkerFromNode(element, fileEntry.Key);
+                            var marker = _markerXmlParser.CreateMarkerFromNode(element, fileEntry.Key);
                             if (marker != null)
                             {
                                 markersForThisFile.Add(marker);
@@ -87,7 +96,7 @@ public class PackLoader
 
             foreach (var categoryNode in overlayData.Elements(TacoXmlConstants.MarkerCategoryElement))
             {
-                MergeCategoryRecursive(categoryNode, rootCategory, docEntry.Key);
+                _categoryBuilder.MergeCategoryRecursive(categoryNode, rootCategory, docEntry.Key);
             }
         }
 
@@ -95,93 +104,12 @@ public class PackLoader
         {
             foreach (var marker in fileMarkers)
             {
-                var destinationCategory = FindOrCreateCategoryByNamespace(rootCategory, marker.Type);
+                var destinationCategory = _categoryBuilder.FindOrCreateCategoryByNamespace(rootCategory, marker.Type);
                 destinationCategory.Markers.Add(marker);
                 marker.EnableChangeTracking();
             }
         }
 
         return result;
-    }
-
-    private Marker? CreateMarkerFromNode(XElement poiNode, string sourceFile)
-    {
-        var guidString = poiNode.AttributeIgnoreCase(TacoXmlConstants.GuidAttribute)?.Value;
-        Guid markerGuid = Guid.Empty;
-        if (!string.IsNullOrEmpty(guidString))
-        {
-            try { markerGuid = new Guid(Convert.FromBase64String(guidString)); }
-            catch (FormatException) { Guid.TryParse(guidString, out markerGuid); }
-        }
-        if (markerGuid == Guid.Empty)
-        {
-            markerGuid = Guid.NewGuid();
-        }
-
-        var xPosAttr = poiNode.AttributeIgnoreCase(TacoXmlConstants.XPosAttribute);
-        var yPosAttr = poiNode.AttributeIgnoreCase(TacoXmlConstants.YPosAttribute);
-        if (xPosAttr == null || yPosAttr == null)
-        {
-            return null; 
-        }
-
-        return new Marker
-        {
-            Guid = markerGuid,
-            MapId = int.TryParse(poiNode.AttributeIgnoreCase(TacoXmlConstants.MapIdAttribute)?.Value, out var mid) ? mid : 0,
-            X = double.TryParse(xPosAttr.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var x) ? x : 0,
-            Y = double.TryParse(yPosAttr.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var y) ? y : 0,
-            Z = double.TryParse(poiNode.AttributeIgnoreCase(TacoXmlConstants.ZPosAttribute)?.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var z) ? z : 0,
-            Type = poiNode.AttributeIgnoreCase(TacoXmlConstants.TypeAttribute)?.Value ?? string.Empty,
-            SourceFile = sourceFile,
-            IsDirty = false
-        };
-    }
-
-    private void MergeCategoryRecursive(XElement categoryNode, Category parent, string sourceFile)
-    {
-        var internalName = categoryNode.Attribute(TacoXmlConstants.NameAttribute)?.Value ?? string.Empty;
-        if (string.IsNullOrEmpty(internalName))
-        {
-            return;
-        }
-
-        var ourCategory = parent.SubCategories.FirstOrDefault(c => c.InternalName.Equals(internalName, StringComparison.OrdinalIgnoreCase));
-        if (ourCategory == null)
-        {
-            ourCategory = new Category { InternalName = internalName, Parent = parent };
-            parent.SubCategories.Add(ourCategory);
-        }
-        ourCategory.IsDefinition = true;
-        ourCategory.SourceFile = sourceFile;
-        ourCategory.DisplayName = categoryNode.Attribute(TacoXmlConstants.DisplayNameAttribute)?.Value ?? internalName;
-        ourCategory.IsSeparator = categoryNode.Attribute(TacoXmlConstants.IsSeparatorAttribute)?.Value == "1";
-        ourCategory.Attributes = categoryNode.Attributes().Select(a => new KeyValuePair<string, string>(a.Name.LocalName, a.Value)).ToList();
-        foreach (var subNode in categoryNode.Elements(TacoXmlConstants.MarkerCategoryElement))
-        {
-            MergeCategoryRecursive(subNode, ourCategory, sourceFile);
-        }
-    }
-
-    private Category FindOrCreateCategoryByNamespace(Category root, string fullNamespace)
-    {
-        if (string.IsNullOrEmpty(fullNamespace))
-        {
-            return root;
-        }
-
-        var pathParts = fullNamespace.Split('.');
-        Category current = root;
-        foreach (var part in pathParts)
-        {
-            var next = current.SubCategories.FirstOrDefault(c => c.InternalName.Equals(part, StringComparison.OrdinalIgnoreCase));
-            if (next == null)
-            {
-                next = new Category { InternalName = part, DisplayName = part, Parent = current };
-                current.SubCategories.Add(next);
-            }
-            current = next;
-        }
-        return current;
     }
 }
