@@ -85,7 +85,10 @@ public class WorkspaceManager
             FileName = activeDocumentPath.StartsWith("Untitled") ? "MyRoute.xml" : Path.GetFileName(activeDocumentPath)
         };
 
-        if (dialog.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
 
         var newFilePath = dialog.FileName;
 
@@ -101,7 +104,10 @@ public class WorkspaceManager
         var newDoc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(TacoXmlConstants.OverlayDataElement));
         _packWriterService.RewritePoisSection(newDoc, markersToSave, unmanagedElements ?? Enumerable.Empty<XElement>());
 
-        if (!await WriteDocumentToDiskAsync(newDoc, newFilePath)) return;
+        if (!await WriteDocumentToDiskAsync(newDoc, newFilePath))
+        {
+            return;
+        }
 
         _logger.LogInformation("File saved as '{newFilePath}' and workspace context has been reset to a single-file mode.", newFilePath);
     }
@@ -119,7 +125,10 @@ public class WorkspaceManager
         var markersInOrder = workspacePack.MarkersByFile[sourceKeyForWorkspace];
         _packWriterService.RewritePoisSection(docToSave, markersInOrder, unmanagedElements ?? Enumerable.Empty<XElement>());
 
-        if (!await WriteDocumentToDiskAsync(docToSave, saveDiskPath)) return;
+        if (!await WriteDocumentToDiskAsync(docToSave, saveDiskPath))
+        {
+            return;
+        }
 
         workspacePack.AddedMarkers.RemoveWhere(m => m.SourceFile.Equals(sourceKeyForWorkspace, StringComparison.OrdinalIgnoreCase));
         workspacePack.DeletedMarkers.RemoveWhere(m => m.SourceFile.Equals(sourceKeyForWorkspace, StringComparison.OrdinalIgnoreCase));

@@ -92,7 +92,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public void InsertMarker(Marker newMarker, int insertionIndex)
     {
-        if (_workspacePack == null) return;
+        if (_workspacePack == null)
+        {
+            return;
+        }
 
         var action = new AddMarkerAction(_workspacePack, newMarker, insertionIndex);
         if (action.Execute())
@@ -254,7 +257,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public async Task SaveActiveDocumentAsAsync()
     {
-        if (ActiveDocumentPath == null || _workspacePack == null) return;
+        if (ActiveDocumentPath == null || _workspacePack == null)
+        {
+            return;
+        }
 
         await _workspaceManager.SaveActiveDocumentAsAsync(_workspacePack, ActiveDocumentPath);
         OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -263,7 +269,10 @@ public partial class PackStateService : ObservableObject, IPackStateService
 
     public async Task NewFileAsync()
     {
-        if (!await CheckAndPromptToSaveChanges()) return;
+        if (!await CheckAndPromptToSaveChanges())
+        {
+            return;
+        }
 
         CloseWorkspaceInternal();
         _newFileCounter++;
