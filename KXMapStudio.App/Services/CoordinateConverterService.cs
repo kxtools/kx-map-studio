@@ -2,64 +2,60 @@
 
 using System;
 
-namespace KXMapStudio.App.Services
+namespace KXMapStudio.App.Services;
+
+/// <summary>
+/// Converts world coordinates (meters) from MumbleLink into continent pixel coordinates that match
+/// the "coord" arrays returned by /v2/continents and /v2/maps. This is a direct C# port of the logic
+/// that Blish HUD uses (WorldUtil.WorldToGameCoord + MapToContinent) and has been verified by
+/// comparing its output with the live <c>PlayerLocationMap</c> values for multiple waypoints.
+/// </summary>
+public sealed class CoordinateConverterService
 {
-    // Simple record returned by the converter
-    public record Point2D(double X, double Y);
+    private const double InchesPerMeter = 39.37007874015748; // 1 / 0.0254f
+
+    private readonly MapDataService _mapDataService;
+
+    public CoordinateConverterService(MapDataService mapDataService)
+    {
+        _mapDataService = mapDataService ?? throw new ArgumentNullException(nameof(mapDataService));
+    }
 
     /// <summary>
-    /// Converts Mumble Link world coordinates (X,Z) into continent‑pixel coordinates
-    /// that match the "coord" array supplied by the /v2/continents and /v2/maps endpoints.
-    /// The math mirrors the proven implementation in Blish HUD (WorldUtil.cs).
+    /// Immutable 2‑D point in continent coordinates.
     /// </summary>
-    public sealed class CoordinateConverterService
+    public sealed record Point2D(double X, double Y);
+
+    /// <summary>
+    /// Convert the supplied marker's world (X,Z) position to continent (X,Y).
+    /// </summary>
+    public Point2D ConvertWorldToContinentCoordinates(Marker marker)
     {
-        private readonly MapDataService _mapDataService;
+        var mapData = _mapDataService.GetMapData(marker.MapId)
+                     ?? throw new InvalidOperationException($"Geometry missing for map {marker.MapId}.");
 
-        public CoordinateConverterService(MapDataService mapDataService)
-        {
-            _mapDataService = mapDataService ?? throw new ArgumentNullException(nameof(mapDataService));
-        }
+        // 1) World metres → map inches
+        double mapX = marker.X * InchesPerMeter;
+        double mapY = marker.Z * InchesPerMeter; // Z grows north in GW2 world space, matches map Y so no sign flip
 
-        /// <summary>
-        /// Converts the given marker's world position to continent pixels.
-        /// </summary>
-        /// <exception cref="InvalidOperationException">Thrown when geometry for the map is missing.</exception>
-        public Point2D ConvertWorldToContinentCoordinates(Marker marker)
-        {
-            var mapData = _mapDataService.GetMapData(marker.MapId);
-            if (mapData == null || mapData.MapRect.Length < 2 || mapData.ContinentRect.Length < 2)
-            {
-                throw new InvalidOperationException($"Geometry missing for map {marker.MapId}. Check AllMapRects.json.");
-            }
+        // 2) Normalise to 0..1 inside map_rect
+        var mapMinX = mapData.MapRect[0][0];
+        var mapMinY = mapData.MapRect[0][1];
+        var mapMaxX = mapData.MapRect[1][0];
+        var mapMaxY = mapData.MapRect[1][1];
 
-            // world -> map. Game Z grows south, 2D map Y grows north, therefore negate Z when mapping to Y
-            double mapX = marker.X;
-            double mapY = -marker.Z;
+        double pctX = (mapX - mapMinX) / (mapMaxX - mapMinX);
+        double pctY = (mapY - mapMinY) / (mapMaxY - mapMinY);
 
-            // Extract rectangles (min,max) for easier reading
-            double mapMinX = mapData.MapRect[0][0];
-            double mapMinY = mapData.MapRect[0][1];
-            double mapMaxX = mapData.MapRect[1][0];
-            double mapMaxY = mapData.MapRect[1][1];
+        // 3) Interpolate into continent_rect, **inverting the Y axis** because the continent sheet origin is top‑left
+        var contMinX = mapData.ContinentRect[0][0];
+        var contMinY = mapData.ContinentRect[0][1];
+        var contMaxX = mapData.ContinentRect[1][0];
+        var contMaxY = mapData.ContinentRect[1][1];
 
-            double continentMinX = mapData.ContinentRect[0][0];
-            double continentMinY = mapData.ContinentRect[0][1];
-            double continentMaxX = mapData.ContinentRect[1][0];
-            double continentMaxY = mapData.ContinentRect[1][1];
+        double continentX = contMinX + pctX * (contMaxX - contMinX);
+        double continentY = contMinY + (1d - pctY) * (contMaxY - contMinY);
 
-            double percentX = (mapX - mapMinX) / (mapMaxX - mapMinX);
-            double percentY = (mapY - mapMinY) / (mapMaxY - mapMinY);
-
-            // Clamp the percentages in case the marker is slightly outside the playable rectangle
-            percentX = Math.Clamp(percentX, 0d, 1d);
-            percentY = Math.Clamp(percentY, 0d, 1d);
-
-            double continentX = continentMinX + percentX * (continentMaxX - continentMinX);
-            // Y axis is inverted in continent space (origin is top left)
-            double continentY = continentMinY + (1d - percentY) * (continentMaxY - continentMinY);
-
-            return new Point2D(Math.Round(continentX, 4), Math.Round(continentY, 4));
-        }
+        return new Point2D(Math.Round(continentX, 1), Math.Round(continentY, 1));
     }
 }
