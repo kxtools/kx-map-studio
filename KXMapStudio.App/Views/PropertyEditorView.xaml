@@ -13,10 +13,22 @@
                        Style="{StaticResource MaterialDesignSubtitle1TextBlock}" 
                        Margin="8,8,8,16"/>
 
-            <TextBox Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                     materialDesign:HintAssist.Hint="Map ID"
-                     Text="{Binding MapId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                     Margin="8,0,8,12"/>
+            <Grid Margin="8,0,8,12">
+                <TextBox Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                         materialDesign:HintAssist.Hint="Map ID"
+                         materialDesign:HintAssist.HelperText="{Binding MapName}"
+                         Text="{Binding MapId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                         Padding="0 0 32 0" />
+
+                <Button Style="{StaticResource MaterialDesignIconButton}"
+                        Command="{Binding OpenMapWikiCommand}"
+                        ToolTip="View map on the Guild Wars 2 Wiki"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,4,8">
+                    <materialDesign:PackIcon Kind="BookOpenPageVariantOutline" />
+                </Button>
+            </Grid>
 
             <TextBox Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                      materialDesign:HintAssist.Hint="X Coordinate"

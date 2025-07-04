@@ -49,8 +49,13 @@
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Character:" Style="{StaticResource LabelStyle}"/>
                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding MumbleService.CharacterName, Mode=OneWay}" Style="{StaticResource ValueStyle}"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Map ID:" Style="{StaticResource LabelStyle}"/>
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MumbleService.CurrentMapId, Mode=OneWay}" Style="{StaticResource ValueStyle}"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Map:" Style="{StaticResource LabelStyle}" VerticalAlignment="Top" Margin="0,2,10,2"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Vertical">
+                    <TextBlock Text="{Binding MumbleService.CurrentMapId, Mode=OneWay}" Style="{StaticResource ValueStyle}" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding LiveMapName, Mode=OneWay}" Style="{StaticResource ValueStyle}"
+                               Foreground="{DynamicResource MaterialDesign.Brush.ForegroundLight}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
 
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Player X:" Style="{StaticResource LabelStyle}"/>
                 <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MumbleService.PlayerPosition.X, Mode=OneWay, StringFormat=F2}" Style="{StaticResource ValueStyle}"/>

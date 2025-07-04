@@ -27,6 +27,7 @@
 
     <Window.Resources>
         <ResourceDictionary>
+            <converters:MapIdToNameConverter x:Key="MapIdToNameConverter" />
             <converters:BooleanToVisibilityInverterConverter x:Key="BooleanToVisibilityInverterConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         </ResourceDictionary>
@@ -212,6 +213,7 @@
                             </i:Interaction.Behaviors>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Map ID" Binding="{Binding MapId, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
+                                <DataGridTextColumn Header="Map Name" Binding="{Binding MapId, Converter={StaticResource MapIdToNameConverter}, Mode=OneWay}" IsReadOnly="True" Width="SizeToHeader" MinWidth="120" />
                                 <DataGridTextColumn Header="X" Binding="{Binding X, StringFormat=F3, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
                                 <DataGridTextColumn Header="Y" Binding="{Binding Y, StringFormat=F3, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
                                 <DataGridTextColumn Header="Z" Binding="{Binding Z, StringFormat=F3, Mode=TwoWay}" Width="SizeToCells" MinWidth="80" EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnEditingStyle}" />
