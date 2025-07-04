@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
 
@@ -67,12 +67,16 @@ public partial class MainViewModel : ObservableObject
     private readonly HistoryService _historyService;
     private readonly GlobalHotkeyService _globalHotkeyService;
     private readonly UpdateService _updateService;
+    private readonly MapDataService _mapDataService;
 
     [ObservableProperty]
     private bool _isUpdateAvailable;
 
     [ObservableProperty]
     private GitHubRelease? _latestRelease;
+
+    [ObservableProperty]
+    private string _liveMapName = "Loading...";
 
     public MainViewModel(
         IPackStateService packStateService,
@@ -81,7 +85,8 @@ public partial class MainViewModel : ObservableObject
         IFeedbackService feedbackService,
         HistoryService historyService,
         GlobalHotkeyService globalHotkeyService,
-        UpdateService updateService)
+        UpdateService updateService,
+        MapDataService mapDataService)
     {
         PackState = packStateService;
         MumbleService = mumbleService;
@@ -90,6 +95,7 @@ public partial class MainViewModel : ObservableObject
         _historyService = historyService;
         _globalHotkeyService = globalHotkeyService;
         _updateService = updateService;
+        _mapDataService = mapDataService;
 
         AppVersion = $"Version {Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "Unknown"}";
 

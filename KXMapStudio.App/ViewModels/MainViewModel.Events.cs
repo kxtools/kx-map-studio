@@ -15,6 +15,7 @@ public partial class MainViewModel
         PackState.SelectedMarkers.CollectionChanged += OnSelectedMarkersChanged;
         _historyService.PropertyChanged += OnHistoryChanged;
         MumbleService.PropertyChanged += OnMumbleServiceChanged;
+        _mapDataService.MapDataRefreshed += OnMapDataRefreshed;
     }
 
     private void OnPackStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -64,6 +65,32 @@ public partial class MainViewModel
         if (e.PropertyName == nameof(MumbleService.IsAvailable))
         {
             AddMarkerFromGameCommand.NotifyCanExecuteChanged();
+        }
+        if (e.PropertyName == nameof(MumbleService.CurrentMapId) || e.PropertyName == nameof(MumbleService.IsAvailable))
+        {
+            if (MumbleService.IsAvailable)
+            {
+                LiveMapName = _mapDataService.GetMapName((int)MumbleService.CurrentMapId);
+            }
+            else
+            {
+                LiveMapName = "N/A";
+            }
+        }
+    }
+
+    private void OnMapDataRefreshed()
+    {
+        // Force a refresh of the live map name when data arrives
+        OnMumbleServiceChanged(this, new(nameof(MumbleService.CurrentMapId)));
+
+        // Force the grid to re-evaluate the converter bindings
+        // A simple way is to "reset" the collection which makes the UI redraw
+        var markers = MarkersInView.ToList();
+        MarkersInView.Clear();
+        foreach (var marker in markers)
+        {
+            MarkersInView.Add(marker);
         }
     }
 

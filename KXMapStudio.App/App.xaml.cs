@@ -56,6 +56,7 @@ namespace KXMapStudio.App
                     services.AddSingleton<PackLoader>();
                     services.AddSingleton<PackLoaderFactory>();
                     services.AddSingleton<WorkspaceManager>();
+                    services.AddSingleton<MapDataService>();
 
                     services.AddSingleton<IMarkerCrudService, MarkerCrudService>();
 
@@ -77,6 +78,9 @@ namespace KXMapStudio.App
         {
             Log.Information("Application starting up.");
             await AppHost!.StartAsync();
+
+            var mapDataService = AppHost.Services.GetRequiredService<MapDataService>();
+            _ = mapDataService.InitializeAsync();
 
             var mumbleService = AppHost.Services.GetRequiredService<MumbleService>();
             mumbleService.Start();
