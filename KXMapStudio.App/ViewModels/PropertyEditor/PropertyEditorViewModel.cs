@@ -18,21 +18,21 @@ public partial class PropertyEditorViewModel : ObservableObject
     private readonly IPackStateService _packState;
     private readonly MapDataService _mapDataService;
     private readonly WaypointFinderService _waypointFinderService;
-    private readonly IFeedbackService _feedbackService;
+        private readonly IFeedbackService _feedbackService;
 
     private ObservableCollection<Marker> SelectedMarkers => _packState.SelectedMarkers;
     private const string MultipleValuesPlaceholder = "<multiple values>";
 
     public PropertyEditorViewModel(
-        IPackStateService packStateService,
-        MapDataService mapDataService,
-        WaypointFinderService waypointFinderService,
-        IFeedbackService feedbackService)
-    {
-        _packState = packStateService;
-        _mapDataService = mapDataService;
-        _waypointFinderService = waypointFinderService;
-        _feedbackService = feedbackService;
+            IPackStateService packStateService,
+            MapDataService mapDataService,
+            WaypointFinderService waypointFinderService,
+            IFeedbackService feedbackService)
+        {
+            _packState = packStateService;
+            _mapDataService = mapDataService;
+            _waypointFinderService = waypointFinderService;
+            _feedbackService = feedbackService;
 
         HookSelectionEvents();
 

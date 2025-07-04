@@ -16,8 +16,6 @@ public class MapDataService
     private Dictionary<int, List<Waypoint>> _waypointsByMap = new();
     private Dictionary<int, Map> _mapData = new();
 
-    private const string MapsApiUrl = "https://api.guildwars2.com/v2/maps?ids=all";
-
     public event Action? MapDataRefreshed;
 
     public MapDataService(ILogger<MapDataService> logger)
@@ -29,7 +27,7 @@ public class MapDataService
     public async Task InitializeAsync()
     {
         LoadWaypointsFromEmbed();
-        await FetchAndCacheMapDataAsync();
+        LoadMapRectsFromEmbed();
     }
 
     private void LoadWaypointsFromEmbed()
@@ -64,22 +62,33 @@ public class MapDataService
         }
     }
 
-    private async Task FetchAndCacheMapDataAsync()
+    private void LoadMapRectsFromEmbed()
     {
-        _logger.LogInformation("Fetching latest map data from API.");
+        _logger.LogInformation("Loading map rectangles from embedded resource.");
         try
         {
-            var maps = await _httpClient.GetFromJsonAsync<List<Map>>(MapsApiUrl);
-            if (maps == null) return;
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream("KXMapStudio.App.AllMapRects.json");
+            if (stream == null)
+            {
+                _logger.LogError("Embedded resource 'AllMapRects.json' not found.");
+                return;
+            }
 
-            _mapData = maps.ToDictionary(m => m.Id);
+            using var reader = new StreamReader(stream);
+            var json = reader.ReadToEnd();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var allMapRects = JsonSerializer.Deserialize<List<Map>>(json, options);
+            if (allMapRects == null) return;
 
-            _logger.LogInformation("Successfully fetched and cached {Count} maps.", _mapData.Count);
+            _mapData = allMapRects.ToDictionary(m => m.Id);
+
+            _logger.LogInformation("Successfully loaded and parsed {Count} map rectangles.", _mapData.Count);
             MapDataRefreshed?.Invoke();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch map data from API.");
+            _logger.LogError(ex, "Failed to load or parse map rectangles from embedded resource.");
         }
     }
 
@@ -105,15 +114,15 @@ public class MapDataService
 
 public class Map
 {
-    [JsonPropertyName("id")]
+    [JsonPropertyName("Id")]
     public int Id { get; set; }
 
-    [JsonPropertyName("name")]
+    [JsonPropertyName("Name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonPropertyName("map_rect")]
+    [JsonPropertyName("MapRect")]
     public double[][] MapRect { get; set; } = [];
 
-    [JsonPropertyName("continent_rect")]
+    [JsonPropertyName("ContinentRect")]
     public double[][] ContinentRect { get; set; } = [];
 }

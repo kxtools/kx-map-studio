@@ -362,5 +362,6 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# Repomix output
+# Repomix
 repomix-output.xml
+repomix.config.json
