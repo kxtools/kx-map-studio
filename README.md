@@ -101,5 +101,6 @@ KX Map Studio wouldn't be possible without the incredible work from other projec
 *   **[Blish HUD](https://github.com/blish-hud/Blish-HUD):** A fantastic overlay whose architecture and documentation were a great source of inspiration during our development.
 *   **[Gw2Sharp](https://github.com/Archomeda/Gw2Sharp):** The essential library that connects KX Map Studio to Guild Wars 2's in-game data, making live features possible.
 *   **[Material Design in XAML Toolkit](https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit):** For providing the beautiful and modern UI components that make KX Map Studio look so great.
+*   **[maps.gw2.io](https://github.com/Snappey/maps.gw2.io)** – the community web map we open when you press “View on Map”.
 
 Thank you for being part of the KX Tools community!

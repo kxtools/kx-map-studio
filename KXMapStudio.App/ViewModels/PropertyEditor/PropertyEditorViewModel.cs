@@ -3,7 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -17,13 +17,22 @@ public partial class PropertyEditorViewModel : ObservableObject
 {
     private readonly IPackStateService _packState;
     private readonly MapDataService _mapDataService;
+    private readonly WaypointFinderService _waypointFinderService;
+        private readonly IFeedbackService _feedbackService;
+
     private ObservableCollection<Marker> SelectedMarkers => _packState.SelectedMarkers;
     private const string MultipleValuesPlaceholder = "<multiple values>";
 
-    public PropertyEditorViewModel(IPackStateService packStateService, MapDataService mapDataService)
-    {
-        _packState = packStateService;
-        _mapDataService = mapDataService;
+    public PropertyEditorViewModel(
+            IPackStateService packStateService,
+            MapDataService mapDataService,
+            WaypointFinderService waypointFinderService,
+            IFeedbackService feedbackService)
+        {
+            _packState = packStateService;
+            _mapDataService = mapDataService;
+            _waypointFinderService = waypointFinderService;
+            _feedbackService = feedbackService;
 
         HookSelectionEvents();
 
@@ -47,6 +56,7 @@ public partial class PropertyEditorViewModel : ObservableObject
         // This ensures the map name updates if it was fetched after the UI loaded
         OnPropertyChanged(nameof(MapName));
         OpenMapWikiCommand.NotifyCanExecuteChanged();
+        UpdateWaypointInfo();
     }
 
     private void OnSelectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -70,6 +80,7 @@ public partial class PropertyEditorViewModel : ObservableObject
         // Re-evaluate all properties and commands
         OnPropertyChanged(string.Empty);
         OpenMapWikiCommand.NotifyCanExecuteChanged();
+        UpdateWaypointInfo();
     }
 
     private void OnSelectedMarkerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -81,6 +92,7 @@ public partial class PropertyEditorViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(MapName));
             OpenMapWikiCommand.NotifyCanExecuteChanged();
+            UpdateWaypointInfo();
         }
     }
 
@@ -110,7 +122,7 @@ public partial class PropertyEditorViewModel : ObservableObject
         {
             if (IsSingleMarkerSelected && int.TryParse(MapId, out var mapId))
             {
-                return _mapDataService.GetMapName(mapId);
+                return _mapDataService.GetMapData(mapId)?.Name ?? "Unknown Map";
             }
             return null;
         }
@@ -206,5 +218,72 @@ public partial class PropertyEditorViewModel : ObservableObject
     private bool CanOpenMapWiki()
     {
         return !string.IsNullOrEmpty(MapName) && MapName != "Unknown Map";
+    }
+
+    // Waypoint Tools
+    [ObservableProperty]
+    private string? _nearestWaypointName;
+
+    [ObservableProperty]
+    private string? _nearestWaypointChatLink;
+
+    [ObservableProperty]
+    private bool _isWaypointInfoVisible;
+
+    private void UpdateWaypointInfo()
+    {
+        if (IsSingleMarkerSelected)
+        {
+            var marker = SelectedMarkers.First();
+            var nearestWp = _waypointFinderService.FindNearestWaypoint(marker);
+            if (nearestWp != null)
+            {
+                NearestWaypointName = nearestWp.Name;
+                NearestWaypointChatLink = nearestWp.ChatLink;
+                IsWaypointInfoVisible = true;
+            }
+            else
+            {
+                NearestWaypointName = null;
+                NearestWaypointChatLink = null;
+                IsWaypointInfoVisible = false;
+            }
+        }
+        else
+        {
+            NearestWaypointName = null;
+            NearestWaypointChatLink = null;
+            IsWaypointInfoVisible = false;
+        }
+        CopyWaypointLinkCommand.NotifyCanExecuteChanged();
+        ViewWaypointOnWebMapCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteWaypointCommands))]
+    private void CopyWaypointLink()
+    {
+        if (NearestWaypointChatLink != null)
+        {
+            Clipboard.SetText(NearestWaypointChatLink);
+            _feedbackService.ShowMessage($"Copied {NearestWaypointChatLink} ({NearestWaypointName}). Paste in-game to link.");
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteWaypointCommands))]
+    private void ViewWaypointOnWebMap()
+    {
+        if (NearestWaypointChatLink != null)
+        {
+            // Construct the URL directly without encoding the chat link part.
+            var url = $"https://maps.gw2.io/tyria/{NearestWaypointChatLink}";
+
+            // The Process.Start call is smart enough to handle this raw URL correctly.
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+    }
+
+    private bool CanExecuteWaypointCommands()
+    {
+        return !string.IsNullOrEmpty(NearestWaypointChatLink);
     }
 }

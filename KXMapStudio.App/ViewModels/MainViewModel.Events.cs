@@ -70,7 +70,7 @@ public partial class MainViewModel
         {
             if (MumbleService.IsAvailable)
             {
-                LiveMapName = _mapDataService.GetMapName((int)MumbleService.CurrentMapId);
+                LiveMapName = _mapDataService.GetMapData((int)MumbleService.CurrentMapId)?.Name ?? "N/A";
             }
             else
             {

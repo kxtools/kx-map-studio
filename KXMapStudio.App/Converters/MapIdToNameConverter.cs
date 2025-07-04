@@ -17,7 +17,7 @@ public class MapIdToNameConverter : IValueConverter
     {
         if (value is int mapId)
         {
-            return _mapDataService.Value.GetMapName(mapId);
+            return _mapDataService.Value.GetMapData(mapId)?.Name ?? "Invalid ID";
         }
         return "Invalid ID";
     }
