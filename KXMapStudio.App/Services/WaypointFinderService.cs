@@ -30,7 +30,7 @@ public class WaypointFinderService
         }
 
         // 2. Convert custom marker's world coordinates to continent coordinates
-        CoordinateConverterService.Point2D? markerContinentCoords = null;
+        Point2D? markerContinentCoords = null;
         try
         {
             // IMPORTANT: Call the corrected conversion method

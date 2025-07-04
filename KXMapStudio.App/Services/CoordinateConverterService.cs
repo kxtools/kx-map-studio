@@ -22,11 +22,6 @@ public sealed class CoordinateConverterService
     }
 
     /// <summary>
-    /// Immutable 2‑D point in continent coordinates.
-    /// </summary>
-    public sealed record Point2D(double X, double Y);
-
-    /// <summary>
     /// Convert the supplied marker's world (X,Z) position to continent (X,Y).
     /// </summary>
     public Point2D ConvertWorldToContinentCoordinates(Marker marker)
