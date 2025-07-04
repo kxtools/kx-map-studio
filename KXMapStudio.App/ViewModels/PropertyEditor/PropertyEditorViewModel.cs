@@ -274,7 +274,10 @@ public partial class PropertyEditorViewModel : ObservableObject
     {
         if (NearestWaypointChatLink != null)
         {
-            var url = $"https://maps.gw2.io/tyria/{Uri.EscapeDataString(NearestWaypointChatLink)}";
+            // Construct the URL directly without encoding the chat link part.
+            var url = $"https://maps.gw2.io/tyria/{NearestWaypointChatLink}";
+
+            // The Process.Start call is smart enough to handle this raw URL correctly.
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
     }
