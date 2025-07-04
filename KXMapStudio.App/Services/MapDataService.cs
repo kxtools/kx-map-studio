@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -47,7 +46,10 @@ public class MapDataService
             var json = reader.ReadToEnd();
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var allWaypoints = JsonSerializer.Deserialize<List<Waypoint>>(json, options);
-            if (allWaypoints == null) return;
+            if (allWaypoints == null)
+            {
+                return;
+            }
 
             _waypointsByMap = allWaypoints
                 .GroupBy(w => w.MapId)
@@ -79,7 +81,10 @@ public class MapDataService
             var json = reader.ReadToEnd();
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var allMapRects = JsonSerializer.Deserialize<List<Map>>(json, options);
-            if (allMapRects == null) return;
+            if (allMapRects == null)
+            {
+                return;
+            }
 
             _mapData = allMapRects.ToDictionary(m => m.Id);
 

@@ -2,8 +2,6 @@
 
 using Microsoft.Extensions.Logging;
 
-using System; // Required for Math.Sqrt
-
 namespace KXMapStudio.App.Services;
 
 public class WaypointFinderService

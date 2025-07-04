@@ -1,7 +1,5 @@
 ﻿using KXMapStudio.Core;
 
-using System;
-
 namespace KXMapStudio.App.Services;
 
 /// <summary>

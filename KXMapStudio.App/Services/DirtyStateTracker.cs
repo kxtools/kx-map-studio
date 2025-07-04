@@ -32,7 +32,10 @@ namespace KXMapStudio.App.Services
 
         private void OnMarkersCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            if (_packState == null) return;
+            if (_packState == null)
+            {
+                return;
+            }
 
             if (e.OldItems != null)
             {
@@ -54,7 +57,10 @@ namespace KXMapStudio.App.Services
 
         private void OnMarkerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (_packState == null) return;
+            if (_packState == null)
+            {
+                return;
+            }
 
             if (e.PropertyName == nameof(Marker.IsDirty))
             {
