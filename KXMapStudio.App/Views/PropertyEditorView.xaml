@@ -62,6 +62,28 @@
                      IsReadOnly="True"
                      Margin="8,16,8,8"
                      Visibility="{Binding IsSingleMarkerSelected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+            <!-- Waypoint Tools -->
+            <materialDesign:Card Margin="8,16,8,8" Padding="8" UniformCornerRadius="4"
+                                 Visibility="{Binding IsWaypointInfoVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Waypoint Tools" Style="{StaticResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{Binding NearestWaypointName, StringFormat='Nearest WP: {0}'}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding IsWaypointInfoVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Copy WP Link" 
+                                Command="{Binding CopyWaypointLinkCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Margin="0,0,8,0"/>
+                        <Button Command="{Binding ViewWaypointOnWebMapCommand}"
+                                ToolTip="View on maps.gw2.io"
+                                Style="{StaticResource MaterialDesignIconButton}">
+                            <materialDesign:PackIcon Kind="MapSearchOutline" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </materialDesign:Card>
         </StackPanel>
     </materialDesign:Card>
 </UserControl>

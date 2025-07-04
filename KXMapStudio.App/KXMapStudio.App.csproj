@@ -32,8 +32,9 @@
 
   <ItemGroup>
       <Content Include="hotkeys.json">
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="AllWaypoints.json" />
   </ItemGroup>
 
   <ItemGroup>

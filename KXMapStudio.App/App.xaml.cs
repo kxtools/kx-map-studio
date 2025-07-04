@@ -57,6 +57,8 @@ namespace KXMapStudio.App
                     services.AddSingleton<PackLoaderFactory>();
                     services.AddSingleton<WorkspaceManager>();
                     services.AddSingleton<MapDataService>();
+                    services.AddSingleton<WaypointFinderService>();
+                    services.AddSingleton<CoordinateConverterService>();
 
                     services.AddSingleton<IMarkerCrudService, MarkerCrudService>();
 

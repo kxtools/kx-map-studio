@@ -1,117 +1,96 @@
 ﻿using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
+using KXMapStudio.Core;
 using Microsoft.Extensions.Logging;
 
 namespace KXMapStudio.App.Services;
-
-public record MapNameEntry(
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("name")] string Name
-);
 
 public class MapDataService
 {
     private readonly ILogger<MapDataService> _logger;
     private readonly HttpClient _httpClient;
-    private Dictionary<int, string> _mapNames = new();
+    private Dictionary<int, List<Waypoint>> _waypointsByMap = new();
+    private Dictionary<int, Map> _mapData = new();
 
-    private const string ApiUrl = "https://api.guildwars2.com/v1/map_names.json";
-    private readonly string _cacheFilePath;
+    private const string MapsApiUrl = "https://api.guildwars2.com/v2/maps?ids=all";
 
-    // Event to notify the UI when data is ready
     public event Action? MapDataRefreshed;
 
     public MapDataService(ILogger<MapDataService> logger)
     {
         _logger = logger;
         _httpClient = new HttpClient();
-
-        // Define a safe, user-specific location for the cache file
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        _cacheFilePath = Path.Combine(appDataPath, "KXMapStudio", "map_names.json");
-        Directory.CreateDirectory(Path.GetDirectoryName(_cacheFilePath)!);
     }
 
-    // This is the main method to be called at app startup
     public async Task InitializeAsync()
     {
-        // Load from cache first for a fast startup. This is non-blocking.
-        await LoadFromCacheAsync();
-
-        // Then, try to refresh from the API in the background.
-        // This won't block the UI and will update the data if successful.
-        await FetchAndCacheAsync();
+        LoadWaypointsFromEmbed();
+        await FetchAndCacheMapDataAsync();
     }
 
-    private async Task FetchAndCacheAsync()
+    private void LoadWaypointsFromEmbed()
     {
-        _logger.LogInformation("Fetching latest map names from API.");
+        _logger.LogInformation("Loading waypoints from embedded resource.");
         try
         {
-            var mapEntries = await _httpClient.GetFromJsonAsync<List<MapNameEntry>>(ApiUrl);
-            if (mapEntries == null)
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream("KXMapStudio.App.AllWaypoints.json");
+            if (stream == null)
             {
-                _logger.LogWarning("API returned null for map names.");
+                _logger.LogError("Embedded resource 'AllWaypoints.json' not found.");
                 return;
             }
 
-            var newMapNames = mapEntries
-                .Where(e => int.TryParse(e.Id, out _))
-                .ToDictionary(e => int.Parse(e.Id), e => e.Name);
+            using var reader = new StreamReader(stream);
+            var json = reader.ReadToEnd();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var allWaypoints = JsonSerializer.Deserialize<List<Waypoint>>(json, options);
+            if (allWaypoints == null) return;
 
-            // If we got new data, update in-memory dict, save to cache, and notify listeners.
-            _mapNames = newMapNames;
-            await SaveToCacheAsync();
-            _logger.LogInformation("Successfully refreshed and cached {Count} map names.", _mapNames.Count);
+            _waypointsByMap = allWaypoints
+                .GroupBy(w => w.MapId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            _logger.LogInformation("Successfully loaded and parsed {Count} waypoints.", allWaypoints.Count);
             MapDataRefreshed?.Invoke();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch map names from API. Will rely on cached data if available.");
+            _logger.LogError(ex, "Failed to load or parse waypoints from embedded resource.");
         }
     }
 
-    private async Task LoadFromCacheAsync()
+    private async Task FetchAndCacheMapDataAsync()
     {
-        if (!File.Exists(_cacheFilePath)) return;
-
+        _logger.LogInformation("Fetching latest map data from API.");
         try
         {
-            _logger.LogInformation("Loading map names from local cache: {Path}", _cacheFilePath);
-            var json = await File.ReadAllTextAsync(_cacheFilePath);
-            var cachedNames = JsonSerializer.Deserialize<Dictionary<int, string>>(json);
-            if (cachedNames != null)
-            {
-                _mapNames = cachedNames;
-                MapDataRefreshed?.Invoke(); // Notify UI that some data is ready
-            }
+            var maps = await _httpClient.GetFromJsonAsync<List<Map>>(MapsApiUrl);
+            if (maps == null) return;
+
+            _mapData = maps.ToDictionary(m => m.Id);
+
+            _logger.LogInformation("Successfully fetched and cached {Count} maps.", _mapData.Count);
+            MapDataRefreshed?.Invoke();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load map names from cache file.");
+            _logger.LogError(ex, "Failed to fetch map data from API.");
         }
     }
 
-    private async Task SaveToCacheAsync()
+    public List<Waypoint> GetWaypointsForMap(int mapId)
     {
-        try
-        {
-            var json = JsonSerializer.Serialize(_mapNames);
-            await File.WriteAllTextAsync(_cacheFilePath, json);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save map names to cache.");
-        }
+        return _waypointsByMap.TryGetValue(mapId, out var waypoints) ? waypoints : new List<Waypoint>();
     }
 
-    public string GetMapName(int mapId)
+    public Map? GetMapData(int mapId)
     {
-        return _mapNames.TryGetValue(mapId, out var name) ? name : "Unknown Map";
+        return _mapData.TryGetValue(mapId, out var map) ? map : null;
     }
 
     public string GetWikiUrl(string mapName)
@@ -122,4 +101,19 @@ public class MapDataService
         }
         return $"https://wiki.guildwars2.com/wiki/{Uri.EscapeDataString(mapName.Replace(' ', '_'))}";
     }
+}
+
+public class Map
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("map_rect")]
+    public double[][] MapRect { get; set; } = [];
+
+    [JsonPropertyName("continent_rect")]
+    public double[][] ContinentRect { get; set; } = [];
 }
