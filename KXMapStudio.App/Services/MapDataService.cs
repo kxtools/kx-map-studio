@@ -25,17 +25,17 @@ public class MapDataService
 
     public async Task InitializeAsync()
     {
-        LoadWaypointsFromEmbed();
-        LoadMapRectsFromEmbed();
+        await LoadWaypointsFromEmbed();
+        await LoadMapRectsFromEmbed();
     }
 
-    private void LoadWaypointsFromEmbed()
+    private async Task LoadWaypointsFromEmbed()
     {
         _logger.LogInformation("Loading waypoints from embedded resource.");
         try
         {
             var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream("KXMapStudio.App.AllWaypoints.json");
+            await using var stream = assembly.GetManifestResourceStream("KXMapStudio.App.AllWaypoints.json");
             if (stream == null)
             {
                 _logger.LogError("Embedded resource 'AllWaypoints.json' not found.");
@@ -43,7 +43,7 @@ public class MapDataService
             }
 
             using var reader = new StreamReader(stream);
-            var json = reader.ReadToEnd();
+            var json = await reader.ReadToEndAsync();
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var allWaypoints = JsonSerializer.Deserialize<List<Waypoint>>(json, options);
             if (allWaypoints == null)
@@ -64,13 +64,13 @@ public class MapDataService
         }
     }
 
-    private void LoadMapRectsFromEmbed()
+    private async Task LoadMapRectsFromEmbed()
     {
         _logger.LogInformation("Loading map rectangles from embedded resource.");
         try
         {
             var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream("KXMapStudio.App.AllMapRects.json");
+            await using var stream = assembly.GetManifestResourceStream("KXMapStudio.App.AllMapRects.json");
             if (stream == null)
             {
                 _logger.LogError("Embedded resource 'AllMapRects.json' not found.");
@@ -78,7 +78,7 @@ public class MapDataService
             }
 
             using var reader = new StreamReader(stream);
-            var json = reader.ReadToEnd();
+            var json = await reader.ReadToEndAsync();
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var allMapRects = JsonSerializer.Deserialize<List<Map>>(json, options);
             if (allMapRects == null)
