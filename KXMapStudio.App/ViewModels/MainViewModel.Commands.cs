@@ -76,15 +76,14 @@ public partial class MainViewModel
     private void AddMarkerFromGame()
     {
         PackState.AddMarkerFromGame();
-        Application.Current.Dispatcher.InvokeAsync(() =>
+
+        // Do this immediately. The code-behind already handles the ScrollIntoView logic.
+        if (PackState.ActiveDocumentMarkers.Any())
         {
-            if (PackState.ActiveDocumentMarkers.Any())
-            {
-                var newMarker = PackState.ActiveDocumentMarkers.Last();
-                PackState.SelectedMarkers.Clear();
-                PackState.SelectedMarkers.Add(newMarker);
-            }
-        }, System.Windows.Threading.DispatcherPriority.Background);
+            var newMarker = PackState.ActiveDocumentMarkers.Last();
+            PackState.SelectedMarkers.Clear();
+            PackState.SelectedMarkers.Add(newMarker);
+        }
     }
 
     public void CopySelectedMarkerGuid(List<Marker> selectedMarkers)
@@ -196,10 +195,7 @@ public partial class MainViewModel
 
         PackState.InsertMarker(newMarker, insertionIndex);
 
-        Application.Current.Dispatcher.InvokeAsync(() =>
-        {
-            PackState.SelectedMarkers.Clear();
-            PackState.SelectedMarkers.Add(newMarker);
-        }, System.Windows.Threading.DispatcherPriority.Background);
+        PackState.SelectedMarkers.Clear();
+        PackState.SelectedMarkers.Add(newMarker);
     }
 }

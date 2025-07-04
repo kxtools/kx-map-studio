@@ -154,37 +154,37 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateMarkersInView()
     {
-        var selectionToRestore = new List<Marker>(PackState.SelectedMarkers);
+        // Get a copy of the currently selected markers.
+        var currentSelection = PackState.SelectedMarkers.ToList();
+
+        // Clear and repopulate the view based on the active filter.
         MarkersInView.Clear();
 
+        IEnumerable<Marker> markersToDisplay;
         var selectedCategory = PackState.SelectedCategory;
         if (selectedCategory == null)
         {
-            if (PackState.IsWorkspaceLoaded)
-            {
-                foreach (var marker in PackState.ActiveDocumentMarkers)
-                {
-                    MarkersInView.Add(marker);
-                }
-            }
+            // No filter, show all markers from the active document.
+            markersToDisplay = PackState.ActiveDocumentMarkers;
         }
         else
         {
-            var markersToDisplay = PackState.ActiveDocumentMarkers.Where(m =>
+            // A category is selected, so filter the markers.
+            markersToDisplay = PackState.ActiveDocumentMarkers.Where(m =>
                 m.Type != null && m.Type.StartsWith(selectedCategory.FullName, System.StringComparison.OrdinalIgnoreCase));
-            foreach (var marker in markersToDisplay)
-            {
-                MarkersInView.Add(marker);
-            }
         }
 
-        PackState.SelectedMarkers.Clear();
-        foreach (var marker in selectionToRestore)
+        foreach (var marker in markersToDisplay)
         {
-            if (MarkersInView.Contains(marker))
-            {
-                PackState.SelectedMarkers.Add(marker);
-            }
+            MarkersInView.Add(marker);
+        }
+
+        // IMPORTANT: Prune any selected markers that are no longer in the view.
+        // This handles cases where a filter is applied and a selected marker is now hidden.
+        var markersToRemoveFromSelection = currentSelection.Where(m => !MarkersInView.Contains(m)).ToList();
+        foreach (var markerToRemove in markersToRemoveFromSelection)
+        {
+            PackState.SelectedMarkers.Remove(markerToRemove);
         }
     }
 

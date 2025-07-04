@@ -133,12 +133,32 @@ namespace KXMapStudio.App.Views
 
         private void SelectedMarkers_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
+            // We only care about the specific scenario where ONE new marker is added to the selection.
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems?.Count == 1)
             {
                 var newItem = e.NewItems[0];
                 if (newItem != null)
                 {
-                    MarkersDataGrid.ScrollIntoView(newItem);
+                    // Use the dispatcher to ensure the UI has finished generating the new row
+                    // before we try to interact with it.
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        // STEP 1: Explicitly tell the DataGrid which item is selected.
+                        // This is the most critical step to reset its internal state.
+                        MarkersDataGrid.SelectedItem = newItem;
+
+                        // STEP 2: Scroll the new item into view.
+                        MarkersDataGrid.ScrollIntoView(newItem);
+
+                        // STEP 3: Find the actual DataGridRow and give it keyboard focus.
+                        // This prevents the "ghost" selection of the previous item.
+                        var row = (DataGridRow)MarkersDataGrid.ItemContainerGenerator.ContainerFromItem(newItem);
+                        if (row != null)
+                        {
+                            row.Focus();
+                        }
+
+                    }), System.Windows.Threading.DispatcherPriority.ContextIdle);
                 }
             }
         }
