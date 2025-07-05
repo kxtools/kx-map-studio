@@ -77,7 +77,10 @@ public partial class MainViewModel : ObservableObject
         get
         {
             if (!PackState.IsWorkspaceLoaded || string.IsNullOrEmpty(PackState.ActiveDocumentPath))
+            {
                 return "KX Map Studio";
+            }
+
             var unsavedIndicator = PackState.IsActiveDocumentDirty ? "*" : "";
             var documentName = Path.GetFileName(PackState.ActiveDocumentPath);
             if (PackState.IsWorkspaceArchive)
@@ -123,7 +126,12 @@ public partial class MainViewModel : ObservableObject
         CopySelectedMarkerGuidCommand = new RelayCommand(CopySelectedMarkerGuid, () => PackState.SelectedMarkers.Count == 1);
         InsertNewMarkerCommand = new RelayCommand<Marker?>(InsertNewMarker, _ => PackState.ActiveDocumentPath != null);
         SelectCategoryCommand = new RelayCommand<object>(HandleSelectCategory);
-        AcknowledgeUpdateCommand = new RelayCommand(() => { if (LatestRelease != null) OpenLink(LatestRelease.HtmlUrl); IsUpdateAvailable = false; });
+        AcknowledgeUpdateCommand = new RelayCommand(() => { if (LatestRelease != null)
+            {
+                OpenLink(LatestRelease.HtmlUrl);
+            }
+
+            IsUpdateAvailable = false; });
         OpenLinkCommand = new RelayCommand<string?>(OpenLink);
         OpenKxToolsWebsiteCommand = new RelayCommand(() => OpenLinkCommand.Execute(Constants.KxToolsWebsiteUrl));
         OpenDiscordLinkCommand = new RelayCommand(() => OpenLinkCommand.Execute(Constants.DiscordInviteUrl));
@@ -140,14 +148,18 @@ public partial class MainViewModel : ObservableObject
     {
         var dialog = new OpenFileDialog { Title = "Open Marker File", Filter = "Supported Files (*.taco, *.zip, *.xml)|*.taco;*.zip;*.xml|All files (*.*)|*.*" };
         if (dialog.ShowDialog() == true)
+        {
             await PackState.OpenWorkspaceAsync(dialog.FileName);
+        }
     }
 
     private async Task OpenFolderAsync()
     {
         var dialog = new CommonOpenFileDialog { Title = "Select Workspace Folder", IsFolderPicker = true };
         if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+        {
             await PackState.OpenWorkspaceAsync(dialog.FileName);
+        }
     }
 
     private async Task CloseWorkspaceAsync()
@@ -197,7 +209,11 @@ public partial class MainViewModel : ObservableObject
     }
     private bool CanMoveSelectedMarkersUp()
     {
-        if (!PackState.SelectedMarkers.Any()) return false;
+        if (!PackState.SelectedMarkers.Any())
+        {
+            return false;
+        }
+
         int minIndex = PackState.SelectedMarkers.Min(m => PackState.ActiveDocumentMarkers.IndexOf(m));
         return minIndex > 0;
     }
@@ -209,7 +225,11 @@ public partial class MainViewModel : ObservableObject
     }
     private bool CanMoveSelectedMarkersDown()
     {
-        if (!PackState.SelectedMarkers.Any()) return false;
+        if (!PackState.SelectedMarkers.Any())
+        {
+            return false;
+        }
+
         int maxIndex = PackState.SelectedMarkers.Max(m => PackState.ActiveDocumentMarkers.IndexOf(m));
         return maxIndex < PackState.ActiveDocumentMarkers.Count - 1;
     }
@@ -226,7 +246,11 @@ public partial class MainViewModel : ObservableObject
 
     public void InsertNewMarker(Marker? rightClickedMarker)
     {
-        if (PackState.WorkspacePack == null || PackState.ActiveDocumentPath == null) return;
+        if (PackState.WorkspacePack == null || PackState.ActiveDocumentPath == null)
+        {
+            return;
+        }
+
         int insertionIndex = rightClickedMarker != null
             ? PackState.ActiveDocumentMarkers.IndexOf(rightClickedMarker) + 1
             : PackState.ActiveDocumentMarkers.Count;
@@ -248,7 +272,11 @@ public partial class MainViewModel : ObservableObject
 
     private void OpenLink(string? url)
     {
-        if (string.IsNullOrEmpty(url)) return;
+        if (string.IsNullOrEmpty(url))
+        {
+            return;
+        }
+
         try
         {
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });

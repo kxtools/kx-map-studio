@@ -168,44 +168,70 @@ namespace KXMapStudio.App.Views
 
         private void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is not MainViewModel vm) return;
+            if (DataContext is not MainViewModel vm)
+            {
+                return;
+            }
+
             vm.DeleteMarkersCommand.Execute(null);
         }
 
         private void MoveUpMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is not MainViewModel vm) return;
+            if (DataContext is not MainViewModel vm)
+            {
+                return;
+            }
+
             vm.MoveMarkersUpCommand.Execute(null);
         }
 
         private void MoveDownMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is not MainViewModel vm) return;
+            if (DataContext is not MainViewModel vm)
+            {
+                return;
+            }
+
             vm.MoveMarkersDownCommand.Execute(null);
         }
 
         private void CopyGuidMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is not MainViewModel vm) return;
+            if (DataContext is not MainViewModel vm)
+            {
+                return;
+            }
+
             vm.CopySelectedMarkerGuidCommand.Execute(null);
         }
 
         private void InsertNewMarkerMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is not MainViewModel vm) return;
+            if (DataContext is not MainViewModel vm)
+            {
+                return;
+            }
+
             var selectedMarker = MarkersDataGrid.SelectedItem as Core.Marker;
             vm.InsertNewMarkerCommand.Execute(selectedMarker);
         }
 
         public static ScrollViewer? GetScrollViewer(DependencyObject depObj)
         {
-            if (depObj is ScrollViewer scrollViewer) return scrollViewer;
+            if (depObj is ScrollViewer scrollViewer)
+            {
+                return scrollViewer;
+            }
 
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
             {
                 var child = VisualTreeHelper.GetChild(depObj, i);
                 var result = GetScrollViewer(child);
-                if (result != null) return result;
+                if (result != null)
+                {
+                    return result;
+                }
             }
             return null;
         }

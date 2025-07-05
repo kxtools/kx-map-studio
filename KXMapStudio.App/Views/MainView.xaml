@@ -110,7 +110,6 @@
                                     <MenuItem Header="Select All" InputGestureText="Ctrl+A" Command="{x:Static DataGrid.SelectAllCommand}" 
                                               CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
 
-                                    <!-- These now correctly bind to the public commands on MainViewModel -->
                                     <MenuItem Header="Move Up" InputGestureText="Alt+Up" Command="{Binding MoveMarkersUpCommand}" />
                                     <MenuItem Header="Move Down" InputGestureText="Alt+Down" Command="{Binding MoveMarkersDownCommand}" />
                                     <Separator/>
