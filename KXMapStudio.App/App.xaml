@@ -6,13 +6,47 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+
+                <!-- Custom palette -->
                 <materialDesign:CustomColorTheme BaseTheme="Dark"
                                                  PrimaryColor="#0062ff"
                                                  SecondaryColor="#3381ff" />
 
+                <!-- Material Design defaults -->
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml"/>
+
+                <!-- Custom brush overrides -->
+                <ResourceDictionary>
+                    <!-- Backgrounds -->
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Background" Color="#111325" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Surface" Color="#1a1f34" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Card.Background" Color="#1a1f34" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Dialog.Background" Color="#111325" />
+
+                    <!-- Foregrounds -->
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Foreground" Color="#e5ecf4" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.ForegroundLight" Color="#808ab8" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Check" Color="#0062ff" />
+
+                    <!-- Borders and separators -->
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Border.Standard" Color="#252b45" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Border.Outlined" Color="#252b45" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.Separator" Color="#252b45" />
+
+                    <!-- Controls -->
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.TextBox.Filled.Background" Color="#252b45" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.ComboBox.Filled.Background" Color="#252b45" />
+
+                    <!-- Scrollbars -->
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Track.Background" Color="#111325" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Thumb.Background" Color="#808ab8" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Thumb.MouseOver.Background" Color="#e5ecf4" />
+                    <SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Thumb.Pressed.Background" Color="#3381ff" />
+                </ResourceDictionary>
+
             </ResourceDictionary.MergedDictionaries>
 
+            <!-- Converters -->
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
         </ResourceDictionary>
