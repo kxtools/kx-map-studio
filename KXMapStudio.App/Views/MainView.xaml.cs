@@ -143,11 +143,9 @@ namespace KXMapStudio.App.Views
                     // before we try to interact with it.
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        // STEP 1: Explicitly tell the DataGrid which item is selected.
-                        // This is the most critical step to reset its internal state.
-                        MarkersDataGrid.SelectedItem = newItem;
-
-                        // STEP 2: Scroll the new item into view.
+                        // STEP 1: Scroll the new item into view.
+                        // NOTE: We don't set SelectedItem here directly, as it interferes with multi-selection.
+                        // The DataGrid's binding handles the selection state.
                         MarkersDataGrid.ScrollIntoView(newItem);
 
                         // STEP 3: Find the actual DataGridRow and give it keyboard focus.
