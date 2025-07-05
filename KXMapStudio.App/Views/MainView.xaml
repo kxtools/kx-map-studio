@@ -206,6 +206,7 @@
                                   materialDesign:DataGridAssist.CellPadding="12 4"
                                   materialDesign:DataGridAssist.ColumnHeaderPadding="12 4"
                                   CanUserSortColumns="False"
+                                  VirtualizingPanel.VirtualizationMode="Standard"
                                   PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
                                   PreviewKeyDown="DataGrid_PreviewKeyDown">
                             <i:Interaction.Behaviors>
