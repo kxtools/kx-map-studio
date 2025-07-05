@@ -222,7 +222,7 @@
                             </DataGrid.Columns>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Insert New Marker Here" InputGestureText="Ctrl+I" Command="{Binding InsertNewMarkerCommand}" CommandParameter="{Binding Path=PlacementTarget.SelectedItem, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ContextMenu}}}" />
+                                    <MenuItem Header="Insert New Marker Here" InputGestureText="Ctrl+I" Click="InsertNewMarkerMenuItem_Click" />
                                     <Separator/>
                                     <MenuItem Header="Select All" InputGestureText="Ctrl+A" Click="SelectAllMenuItem_Click" />
                                     <MenuItem Header="Move Up" InputGestureText="Alt+Up" Click="MoveUpMenuItem_Click" />

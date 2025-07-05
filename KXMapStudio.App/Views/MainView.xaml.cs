@@ -170,43 +170,75 @@ namespace KXMapStudio.App.Views
 
         private void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
-            {
-                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+            if (DataContext is not MainViewModel vm) return;
 
-                vm.DeleteMarkers(selectedMarkers);
-            }
+            var scrollViewer = GetScrollViewer(MarkersDataGrid);
+            var offset = scrollViewer?.VerticalOffset ?? 0;
+
+            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+            vm.DeleteMarkers(selectedMarkers);
+
+            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
-
-        
 
         private void MoveUpMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
-            {
-                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
-                vm.MoveMarkersUp(selectedMarkers);
-            }
+            if (DataContext is not MainViewModel vm) return;
+
+            var scrollViewer = GetScrollViewer(MarkersDataGrid);
+            var offset = scrollViewer?.VerticalOffset ?? 0;
+
+            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+            vm.MoveMarkersUp(selectedMarkers);
+
+            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
         private void MoveDownMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
-            {
-                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
-                vm.MoveMarkersDown(selectedMarkers);
-            }
+            if (DataContext is not MainViewModel vm) return;
+
+            var scrollViewer = GetScrollViewer(MarkersDataGrid);
+            var offset = scrollViewer?.VerticalOffset ?? 0;
+
+            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+            vm.MoveMarkersDown(selectedMarkers);
+
+            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
         private void CopyGuidMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainViewModel vm)
-            {
-                var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
-                vm.CopySelectedMarkerGuid(selectedMarkers);
-            }
+            if (DataContext is not MainViewModel vm) return;
+
+            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
+            vm.CopySelectedMarkerGuid(selectedMarkers);
         }
 
-        
+        private void InsertNewMarkerMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not MainViewModel vm) return;
+
+            var scrollViewer = GetScrollViewer(MarkersDataGrid);
+            var offset = scrollViewer?.VerticalOffset ?? 0;
+
+            var selectedMarker = MarkersDataGrid.SelectedItem as Core.Marker;
+            vm.InsertNewMarkerCommand.Execute(selectedMarker);
+
+            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
+        }
+
+        public static ScrollViewer? GetScrollViewer(DependencyObject depObj)
+        {
+            if (depObj is ScrollViewer scrollViewer) return scrollViewer;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                var child = VisualTreeHelper.GetChild(depObj, i);
+                var result = GetScrollViewer(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
     }
 }
