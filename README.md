@@ -11,7 +11,7 @@
 ## GUI Preview
 
 <p align="center">
-  <img src="images/app_screenshot.png" alt="App Screenshot">
+  <img src="images/app_screenshot_v2.png" alt="App Screenshot">
 </p>
 
 ---

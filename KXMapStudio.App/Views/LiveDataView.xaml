@@ -3,10 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:KXMapStudio.App.Views"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+
     <materialDesign:Card Margin="5" Padding="5" UniformCornerRadius="4">
         <StackPanel>
             <TextBlock Text="Live Game Data" 
@@ -43,8 +43,38 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Is Available:" Style="{StaticResource LabelStyle}"/>
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MumbleService.IsAvailable, Mode=OneWay}" Style="{StaticResource ValueStyle}"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="MumbleLink:" Style="{StaticResource LabelStyle}"/>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                    <materialDesign:PackIcon VerticalAlignment="Center" Margin="0,0,8,0">
+                        <materialDesign:PackIcon.Style>
+                            <Style TargetType="materialDesign:PackIcon">
+                                <Setter Property="Kind" Value="LinkVariantOff" />
+                                <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.ForegroundLight}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding MumbleService.IsAvailable}" Value="True">
+                                        <Setter Property="Kind" Value="LinkVariant" />
+                                        <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.Secondary}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </materialDesign:PackIcon.Style>
+                    </materialDesign:PackIcon>
+
+                    <TextBlock>
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource ValueStyle}">
+                                <Setter Property="Text" Value="Not Connected" />
+                                <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.ForegroundLight}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding MumbleService.IsAvailable}" Value="True">
+                                        <Setter Property="Text" Value="Connected" />
+                                        <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.Secondary}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
 
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Character:" Style="{StaticResource LabelStyle}"/>
                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding MumbleService.CharacterName, Mode=OneWay}" Style="{StaticResource ValueStyle}"/>
