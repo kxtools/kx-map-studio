@@ -1,0 +1,58 @@
+﻿<UserControl x:Class="KXMapStudio.App.Views.SidePanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:views="clr-namespace:KXMapStudio.App.Views"
+             xmlns:core="clr-namespace:KXMapStudio.Core;assembly=KXMapStudio.Core"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="280">
+    <materialDesign:Card Margin="5" UniformCornerRadius="4" VerticalAlignment="Stretch">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Button Command="{Binding AddMarkerFromGameCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="8" ToolTip="{Binding GlobalHotkeys.AddMarkerHotkeyText, StringFormat='Add Marker From Game ({0})'}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="MapMarkerPlus" Margin="0 0 8 0"/>
+                        <TextBlock Text="Add Marker From Game"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding UndoLastAddedMarkerCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="8,0,8,8" ToolTip="{Binding GlobalHotkeys.UndoLastAddHotkeyText, StringFormat='Undo Last Added Marker ({0})'}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Undo" Margin="0 0 8 0"/>
+                        <TextBlock Text="Undo Last Added Marker"/>
+                    </StackPanel>
+                </Button>
+
+                <Expander Header="Live Game Data" Margin="8,0,8,8">
+                    <views:LiveDataView DataContext="{Binding}"/>
+                </Expander>
+
+                <Expander Header="Marker Properties" IsExpanded="True" Margin="8,0,8,8">
+                    <views:PropertyEditorView DataContext="{Binding PropertyEditorViewModel}"/>
+                </Expander>
+
+                <Expander Header="Categories" IsExpanded="False" Margin="8,0,8,8">
+                    <TreeView ItemsSource="{Binding PackState.ActiveRootCategory.SubCategories}" MinHeight="150">
+                        <TreeView.Resources>
+                            <HierarchicalDataTemplate DataType="{x:Type core:Category}" ItemsSource="{Binding SubCategories}">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </HierarchicalDataTemplate>
+                        </TreeView.Resources>
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
+                                <Setter Property="Padding" Value="8 2" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectedItemChanged">
+                                <i:InvokeCommandAction Command="{Binding SelectCategoryCommand}" PassEventArgsToCommand="True" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </TreeView>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </materialDesign:Card>
+</UserControl>

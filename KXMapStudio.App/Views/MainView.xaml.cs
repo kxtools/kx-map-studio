@@ -169,61 +169,32 @@ namespace KXMapStudio.App.Views
         private void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not MainViewModel vm) return;
-
-            var scrollViewer = GetScrollViewer(MarkersDataGrid);
-            var offset = scrollViewer?.VerticalOffset ?? 0;
-
-            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
-            vm.DeleteMarkers(selectedMarkers);
-
-            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
+            vm.DeleteMarkersCommand.Execute(null);
         }
 
         private void MoveUpMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not MainViewModel vm) return;
-
-            var scrollViewer = GetScrollViewer(MarkersDataGrid);
-            var offset = scrollViewer?.VerticalOffset ?? 0;
-
-            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
-            vm.MoveMarkersUp(selectedMarkers);
-
-            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
+            vm.MoveMarkersUpCommand.Execute(null);
         }
 
         private void MoveDownMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not MainViewModel vm) return;
-
-            var scrollViewer = GetScrollViewer(MarkersDataGrid);
-            var offset = scrollViewer?.VerticalOffset ?? 0;
-
-            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
-            vm.MoveMarkersDown(selectedMarkers);
-
-            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
+            vm.MoveMarkersDownCommand.Execute(null);
         }
 
         private void CopyGuidMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not MainViewModel vm) return;
-
-            var selectedMarkers = MarkersDataGrid.SelectedItems.OfType<Core.Marker>().ToList();
-            vm.CopySelectedMarkerGuid(selectedMarkers);
+            vm.CopySelectedMarkerGuidCommand.Execute(null);
         }
 
         private void InsertNewMarkerMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is not MainViewModel vm) return;
-
-            var scrollViewer = GetScrollViewer(MarkersDataGrid);
-            var offset = scrollViewer?.VerticalOffset ?? 0;
-
             var selectedMarker = MarkersDataGrid.SelectedItem as Core.Marker;
             vm.InsertNewMarkerCommand.Execute(selectedMarker);
-
-            Dispatcher.BeginInvoke(new Action(() => scrollViewer?.ScrollToVerticalOffset(offset)), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
         public static ScrollViewer? GetScrollViewer(DependencyObject depObj)
