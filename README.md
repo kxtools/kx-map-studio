@@ -4,6 +4,8 @@
   <img src="images/kxmapstudio_logo.png" alt="KX Map Studio Logo">
 </p>
 
+**From the creators of KX Tools, KX Map Studio is the definitive, open-source desktop application for Guild Wars 2 players to easily create, edit, and manage their in-game marker routes! Explore all our projects at [kxtools.xyz](https://kxtools.xyz).**
+
 > ⚠️ **Early Access Notice (v0.1.0):** This is an **early release** and is still under active development. It has not been thoroughly tested, and certain features may not work reliably. **Large marker files may cause issues**, and stability is not guaranteed yet.
 
 ---
@@ -16,8 +18,6 @@
 
 ---
 
-The definitive, open-source desktop application for Guild Wars 2 players to easily **create, edit, and manage their in-game marker routes**!
-
 Tired of manually editing complex XML files for your Guild Wars 2 routes? KX Map Studio is here to make your life easier. Whether you're making a simple farming path, an achievement guide, or a detailed route for your guild events, our tool provides a visual, user-friendly way to get the job done.
 
 ---
@@ -28,7 +28,7 @@ Tired of manually editing complex XML files for your Guild Wars 2 routes? KX Map
 
 *   **Route Creators:** Build custom paths, achievement guides, or event routes from scratch with ease.
 *   **Route Customizers:** Easily tweak existing marker files from your favorite content creators.
-*   **KX Trainer Users:** Create and fine-tune your own marker files for seamless integration with KX Trainer's teleport features.
+*   **KX Trainer Users:** Create and fine-tune your own marker files for seamless integration with **[KX Trainer's](https://kxtools.xyz/)** teleport features.
 
 > ✅ **100% ToS Compliance:** KX Map Studio uses only the official Guild Wars 2 Mumble Link API to access in-game data. It does **not** perform memory reading or DLL injection.
 
