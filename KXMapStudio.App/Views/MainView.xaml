@@ -55,31 +55,78 @@
         <DockPanel>
             <Menu DockPanel.Dock="Top" materialDesign:MenuAssist.TopLevelMenuItemHeight="40">
                 <MenuItem Header="_File">
-                    <MenuItem Header="_New File" Command="{Binding NewFileCommand}" />
+                    <MenuItem Header="_New File" Command="{Binding NewFileCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="FileOutline" />
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <Separator />
-                    <MenuItem Header="_Open File..." Command="{Binding OpenFileCommand}"/>
-                    <MenuItem Header="Open F_older..." Command="{Binding OpenFolderCommand}"/>
-                    <MenuItem Header="_Close Workspace" Command="{Binding CloseWorkspaceCommand}"/>
+                    <MenuItem Header="_Open File..." Command="{Binding OpenFileCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="FileDocumentOutline" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Open F_older..." Command="{Binding OpenFolderCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="FolderOpenOutline" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="_Close Workspace" Command="{Binding CloseWorkspaceCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="FolderRemoveOutline" />
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="_Save" Command="{Binding SaveDocumentCommand}" InputGestureText="Ctrl+S"/>
-                    <MenuItem Header="Save _As..." Command="{Binding SaveAsCommand}" />
+                    <MenuItem Header="_Save" Command="{Binding SaveDocumentCommand}" InputGestureText="Ctrl+S">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="ContentSave" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Save _As..." Command="{Binding SaveAsCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="ContentSaveEditOutline" />
+                        </MenuItem.Icon>
+                    </MenuItem>
                 </MenuItem>
                 <MenuItem Header="_Edit">
-                    <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z"/>
-                    <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y"/>
+                    <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="Undo" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="Redo" />
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
-                    <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up" />
-                    <MenuItem Header="Move Down" Command="{Binding MoveSelectedMarkersDownCommand}" InputGestureText="Alt+Down" />
+                    <MenuItem Header="Move Up" Command="{Binding MoveSelectedMarkersUpCommand}" InputGestureText="Alt+Up">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="ArrowUp" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Move Down" Command="{Binding MoveSelectedMarkersDownCommand}" InputGestureText="Alt+Down">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="ArrowDown" />
+                        </MenuItem.Icon>
+                    </MenuItem>
                 </MenuItem>
 
                 <MenuItem Header="_Hotkeys">
                     <MenuItem Header="Add Marker From Game" 
                               InputGestureText="{Binding GlobalHotkeys.AddMarkerHotkeyText}" 
-                              Command="{Binding AddMarkerFromGameCommand}" />
+                              Command="{Binding AddMarkerFromGameCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="MapMarkerPlusOutline" />
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <MenuItem Header="Undo Last Added Marker" 
                               InputGestureText="{Binding GlobalHotkeys.UndoLastAddHotkeyText}"
-                              Command="{Binding UndoCommand}"
-                              CommandParameter="{x:Static actions:ActionType.AddMarker}"/>
+                              Command="{Binding UndoLastAddedMarkerCommand}">
+                        <MenuItem.Icon>
+                            <materialDesign:PackIcon Kind="MapMarkerMinusOutline" />
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <Separator/>
                     <MenuItem Header="Note: Hotkeys are configured in hotkeys.json" IsEnabled="False" />
                 </MenuItem>
