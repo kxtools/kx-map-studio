@@ -1,0 +1,166 @@
+<UserControl
+	x:Class="KXMapStudio.Libs.Views.LeftSide.WorkshopExplorer.WorkspaceExplorerUserControl"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+	xmlns:workshopExplorer="clr-namespace:KXMapStudio.Libs.Models.LeftSide.WorkshopExplorer"
+	mc:Ignorable="d"
+	d:DesignHeight="450"
+	d:DesignWidth="300">
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+
+		<!-- Header with Refresh Button -->
+		<Border
+			Grid.Row="0"
+			Style="{StaticResource Kx.PanelHeader}">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<!-- Folder Icon -->
+				<materialDesign:PackIcon Grid.Column="0"
+				                         Kind="FolderOpen"
+				                         Width="20" Height="20"
+				                         VerticalAlignment="Center"
+				                         Margin="0,0,10,0"
+				                         Foreground="{StaticResource Kx.Brush.Accent}" />
+
+				<!-- Title -->
+				<TextBlock
+					Grid.Column="1"
+					Text="Workshop Explorer"
+					VerticalAlignment="Center"
+					FontWeight="SemiBold"
+					FontSize="13" />
+
+				<!-- Action Buttons -->
+				<StackPanel Grid.Column="2" Orientation="Horizontal">
+					<Button
+						Style="{StaticResource MaterialDesignToolForegroundButton}"
+						ToolTip="Create New JSON File..."
+						Command="{Binding CreateFileCommand}"
+						CommandParameter="{x:Null}"
+						Width="32" Height="32"
+						Padding="4"
+						Margin="2,0">
+						<materialDesign:PackIcon Kind="FileDocumentPlusOutline" Width="18" Height="18" />
+					</Button>
+
+					<!-- Refresh Button -->
+					<Button
+						Style="{StaticResource MaterialDesignToolForegroundButton}"
+						ToolTip="Refresh folder tree"
+						Command="{Binding RefreshCommand}"
+						Width="32" Height="32"
+						Padding="4"
+						Margin="2,0">
+						<materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" />
+					</Button>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<!-- TreeView for Files and Folders -->
+		<TreeView
+			Grid.Row="1"
+			ItemsSource="{Binding RootNodes}"
+			BorderThickness="0"
+			Background="Transparent"
+			Padding="4,8"
+			VirtualizingPanel.IsVirtualizing="True"
+			VirtualizingPanel.VirtualizationMode="Recycling"
+			ScrollViewer.HorizontalScrollBarVisibility="Auto"
+			ScrollViewer.VerticalScrollBarVisibility="Auto"
+			SelectedItemChanged="TreeView_OnSelectedItemChanged"
+			ContextMenuOpening="TreeView_OnContextMenuOpening">
+			<TreeView.Resources>
+				<!-- Style for TreeViewItem -->
+				<Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
+					<Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+					<Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding IsModified}" Value="True">
+							<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Status.Warning}" />
+							<Setter Property="FontStyle" Value="Italic" />
+						</DataTrigger>
+						<DataTrigger Binding="{Binding IsDirectory}" Value="False">
+							<Setter Property="ContextMenu">
+								<Setter.Value>
+									<ContextMenu>
+										<!-- Command is intentionally set in code-behind (TreeView_OnContextMenuOpening)
+										     to work around TreeView/XAML binding issues for context menu commands.
+										     Header is "Delete File" to clarify this action applies only to file (non-directory) nodes. -->
+										<MenuItem Header="Delete File"
+										          CommandParameter="{Binding}">
+											<MenuItem.Icon>
+												<materialDesign:PackIcon Kind="DeleteOutline" />
+											</MenuItem.Icon>
+										</MenuItem>
+									</ContextMenu>
+								</Setter.Value>
+							</Setter>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</TreeView.Resources>
+
+			<!-- Hierarchical Data Template -->
+			<TreeView.ItemTemplate>
+				<HierarchicalDataTemplate DataType="{x:Type workshopExplorer:WorkshopExplorerNodeModel}"
+				                          ItemsSource="{Binding Children}">
+					<StackPanel Orientation="Horizontal">
+						<!-- Icon for Directory or File -->
+						<materialDesign:PackIcon
+							Width="16"
+							Height="16"
+							Margin="0,0,4,0"
+							VerticalAlignment="Center">
+							<materialDesign:PackIcon.Style>
+								<Style TargetType="materialDesign:PackIcon">
+									<Style.Triggers>
+										<!-- Directory Icon -->
+										<DataTrigger Binding="{Binding IsDirectory}" Value="True">
+											<Setter Property="Kind" Value="Folder" />
+											<Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.Primary}" />
+										</DataTrigger>
+										<!-- JSON File Icon -->
+										<DataTrigger Binding="{Binding Extension}" Value=".json">
+											<Setter Property="Kind" Value="CodeJson" />
+											<Setter Property="Foreground" Value="#4CAF50" />
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</materialDesign:PackIcon.Style>
+						</materialDesign:PackIcon>
+
+						<!-- File/Folder Name -->
+						<TextBlock
+							Text="{Binding Name}"
+							VerticalAlignment="Center" />
+
+						<!-- Modified indicator (yellow dot) -->
+						<materialDesign:PackIcon
+							Kind="Circle"
+							Width="8" Height="8"
+							Foreground="{StaticResource Kx.Brush.Status.Warning}"
+							Margin="6,0,0,0"
+							VerticalAlignment="Center"
+							Visibility="{Binding IsModified, Converter={StaticResource BooleanToVisibilityConverter}}"
+							ToolTip="Unsaved changes" />
+					</StackPanel>
+				</HierarchicalDataTemplate>
+			</TreeView.ItemTemplate>
+		</TreeView>
+	</Grid>
+</UserControl>

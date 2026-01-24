@@ -1,0 +1,29 @@
+<UserControl x:Class="KXMapStudio.Libs.Views.RightSide.RightSidePanelUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:gridEditor="clr-namespace:KXMapStudio.Libs.Views.RightSide.GridEditor"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="300" d:DesignWidth="600">
+
+	<Border Style="{StaticResource Kx.PanelSurface}">
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+
+			<!-- Optional: consistent header surface; keeps visual balance with left panel -->
+			<Border Grid.Row="0" Style="{StaticResource Kx.PanelHeader}">
+				<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+					<materialDesign:PackIcon Kind="Table" Width="18" Height="18" Foreground="{StaticResource Kx.Brush.Accent}" />
+					<TextBlock Text="GRID EDITOR" Style="{StaticResource PanelHeaderTextBlock}" Margin="10,0,0,0" />
+				</StackPanel>
+			</Border>
+
+			<gridEditor:GridEditorUserControl Grid.Row="1" DataContext="{Binding}" />
+		</Grid>
+	</Border>
+</UserControl>

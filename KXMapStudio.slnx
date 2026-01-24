@@ -1,0 +1,21 @@
+<Solution>
+	<Configurations>
+		<Platform Name="x64"/>
+	</Configurations>
+	<Folder Name="/Libs/">
+		<Project Path="Libs/KXMapStudio.Core/KXMapStudio.Core.csproj">
+			<Platform Solution="Debug|x64" Project="x64"/>
+			<Platform Solution="Release|x64" Project="x64"/>
+		</Project>
+		<Project Path="Libs/KXMapStudio.Libs/KXMapStudio.Libs.csproj">
+			<Platform Solution="Debug|x64" Project="x64"/>
+			<Platform Solution="Release|x64" Project="x64"/>
+		</Project>
+	</Folder>
+	<Folder Name="/Srcs/">
+		<Project Path="Srcs/KXMapStudio.Application/KXMapStudio.Application.csproj">
+			<Platform Solution="Debug|x64" Project="x64"/>
+			<Platform Solution="Release|x64" Project="x64"/>
+		</Project>
+	</Folder>
+</Solution>

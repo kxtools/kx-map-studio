@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<ApplicationIcon>KXMapStudio.ico</ApplicationIcon>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Platforms>x64</Platforms>
+		<PublishTrimmed>false</PublishTrimmed>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<Version>0.4.0</Version>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\..\Libs\KXMapStudio.Libs\KXMapStudio.Libs.csproj"/>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<Resource Include="KXMapStudio.ico">
+			<Link>Resources\KXMapStudio.ico</Link>
+		</Resource>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<Page Update="Views\Windows\WorkspaceWindow.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<XamlRuntime>Wpf</XamlRuntime>
+			<SubType>Designer</SubType>
+		</Page>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<None Remove="appsettings.json"/>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<None Remove="continents.json"/>
+		<Content Include="continents.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<None Remove="maps.json"/>
+		<Content Include="maps.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+</Project>

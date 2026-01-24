@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
+	<PropertyGroup>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Platforms>x64</Platforms>
+		<UseWPF>true</UseWPF>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\KXMapStudio.Core\KXMapStudio.Core.csproj"/>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135"/>
+		<PackageReference Include="MaterialDesignThemes" Version="5.3.0"/>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<Page Update="Views\UsersControls\LeftSide\FilePreview\FilePreviewUserControl.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<XamlRuntime>Wpf</XamlRuntime>
+			<SubType>Designer</SubType>
+		</Page>
+		<Page Update="Views\UsersControls\LeftSide\WorkshopExplorer\WorkspaceExplorerUserControl.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<XamlRuntime>Wpf</XamlRuntime>
+			<SubType>Designer</SubType>
+		</Page>
+		<Page Update="Views\UsersControls\LeftSide\LeftSidePanelUserControl.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<XamlRuntime>Wpf</XamlRuntime>
+			<SubType>Designer</SubType>
+		</Page>
+		<Page Update="Views\RightSide\GridEditor\GridEditorUserControl.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<XamlRuntime>Wpf</XamlRuntime>
+			<SubType>Designer</SubType>
+		</Page>
+	</ItemGroup>
+</Project>

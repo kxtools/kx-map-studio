@@ -365,3 +365,7 @@ FodyWeavers.xsd
 # Repomix
 repomix-output.xml
 repomix.config.json
+
+.idea
+.ai
+./Services/*

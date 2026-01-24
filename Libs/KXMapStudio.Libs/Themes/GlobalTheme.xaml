@@ -1,0 +1,357 @@
+<ResourceDictionary
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+	xmlns:converters="clr-namespace:KXMapStudio.Libs.Converters">
+
+	<!-- Converters -->
+	<BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+	<converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+	<converters:NullOrEmptyToVisibilityConverter x:Key="NullOrEmptyToVisibilityConverter" />
+
+	<ResourceDictionary.MergedDictionaries>
+		<!-- Custom palette -->
+		<materialDesign:CustomColorTheme BaseTheme="Dark" PrimaryColor="#0062ff" SecondaryColor="#3381ff" />
+
+		<!-- Material Design defaults -->
+		<ResourceDictionary
+			Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+
+		<!-- Custom brush overrides -->
+		<ResourceDictionary>
+			<!-- Backgrounds -->
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Background" Color="#0f111a" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Surface" Color="#161926" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Card.Background" Color="#161926" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Dialog.Background" Color="#0f111a" />
+
+			<!-- Foregrounds -->
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Foreground" Color="#e1e4f0" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.ForegroundLight" Color="#949db1" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Check" Color="#0062ff" />
+
+			<!-- Borders and separators -->
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Border.Standard" Color="#2a2e45" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Border.Outlined" Color="#2a2e45" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.Separator" Color="#2a2e45" />
+
+			<!-- Controls -->
+			<SolidColorBrush x:Key="MaterialDesign.Brush.TextBox.Filled.Background" Color="#21253b" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.ComboBox.Filled.Background" Color="#21253b" />
+
+			<!-- Scrollbars -->
+			<SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Track.Background" Color="#0f111a" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Thumb.Background" Color="#4b526d" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Thumb.MouseOver.Background" Color="#6a7391" />
+			<SolidColorBrush x:Key="MaterialDesign.Brush.ScrollBar.Thumb.Pressed.Background" Color="#0062ff" />
+
+			<!-- App design tokens (prefer these in views when possible) -->
+			<SolidColorBrush x:Key="Kx.Brush.AppBackground" Color="#0f111a" />
+			<SolidColorBrush x:Key="Kx.Brush.Surface" Color="#161926" />
+			<SolidColorBrush x:Key="Kx.Brush.Border" Color="#2a2e45" />
+			<SolidColorBrush x:Key="Kx.Brush.Text.Primary" Color="#e1e4f0" />
+			<SolidColorBrush x:Key="Kx.Brush.Text.Secondary" Color="#949db1" />
+
+			<!-- Accent: keep it aligned with configured primary color -->
+			<SolidColorBrush x:Key="Kx.Brush.Accent" Color="#0062ff" />
+
+			<!-- Status colors -->
+			<SolidColorBrush x:Key="Kx.Brush.Status.Error" Color="#CC3333" />
+			<SolidColorBrush x:Key="Kx.Brush.Status.Danger" Color="#CC3333" />
+			<SolidColorBrush x:Key="Kx.Brush.Status.Warning" Color="#F0B429" />
+			<SolidColorBrush x:Key="Kx.Brush.Status.Success" Color="#2EAD4A" />
+
+			<!-- Spacing tokens (XAML-safe) -->
+			<Thickness x:Key="Kx.Padding.PanelHeader">12,8</Thickness>
+			<Thickness x:Key="Kx.Padding.PanelBody">12,8,12,12</Thickness>
+		</ResourceDictionary>
+
+		<!-- Shared Styles -->
+		<ResourceDictionary>
+			<!-- Typography -->
+			<Style x:Key="Kx.Text.SectionHeader" TargetType="TextBlock">
+				<Setter Property="FontSize" Value="13" />
+				<Setter Property="FontWeight" Value="SemiBold" />
+				<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Primary}" />
+				<Setter Property="Margin" Value="{StaticResource Kx.Padding.PanelHeader}" />
+				<Setter Property="VerticalAlignment" Value="Center" />
+			</Style>
+
+			<!-- Backwards-compat: keep existing key used by current views -->
+			<Style x:Key="PanelHeaderTextBlock" TargetType="TextBlock" BasedOn="{StaticResource Kx.Text.SectionHeader}" />
+
+			<!-- Subtle rounding (modern, still low-risk with current layout) -->
+			<CornerRadius x:Key="Kx.CornerRadius.Panel">8</CornerRadius>
+
+			<!-- Shell surfaces -->
+			<Style x:Key="PanelSectionBorder" TargetType="Border">
+				<Setter Property="Background" Value="{StaticResource Kx.Brush.Surface}" />
+				<Setter Property="BorderBrush" Value="{StaticResource Kx.Brush.Border}" />
+				<Setter Property="BorderThickness" Value="0" />
+				<!-- Keep default 0 to avoid layout surprises; panels that want rounding can opt-in -->
+				<Setter Property="CornerRadius" Value="0" />
+			</Style>
+
+			<!-- Panel headers: consistent height + bottom separator line -->
+			<Style x:Key="Kx.PanelHeader" TargetType="Border">
+				<Setter Property="Background" Value="{StaticResource MaterialDesign.Brush.Surface}" />
+				<Setter Property="BorderBrush" Value="{StaticResource MaterialDesign.Brush.Separator}" />
+				<Setter Property="BorderThickness" Value="0,0,0,1" />
+				<Setter Property="Padding" Value="12,8" />
+				<Setter Property="MinHeight" Value="44" />
+				<Setter Property="SnapsToDevicePixels" Value="True" />
+			</Style>
+
+			<!-- Top bar surface (separates Top from content below) -->
+			<Style x:Key="Kx.TopBar" TargetType="Border">
+				<Setter Property="Background" Value="{StaticResource MaterialDesign.Brush.Surface}" />
+				<Setter Property="BorderBrush" Value="{StaticResource MaterialDesign.Brush.Separator}" />
+				<Setter Property="BorderThickness" Value="0,0,0,1" />
+				<Setter Property="Padding" Value="8,6" />
+				<Setter Property="SnapsToDevicePixels" Value="True" />
+				<Setter Property="MinHeight" Value="48" />
+			</Style>
+
+			<!-- Rounded panels: opt-in styles with modern elevation shadows -->
+			<Style x:Key="Kx.PanelSurface" TargetType="Border" BasedOn="{StaticResource PanelSectionBorder}">
+				<Setter Property="CornerRadius" Value="{StaticResource Kx.CornerRadius.Panel}" />
+				<Setter Property="BorderBrush" Value="Transparent" />
+				<Setter Property="Margin" Value="4" />
+				<Setter Property="Padding" Value="0" />
+				<Setter Property="SnapsToDevicePixels" Value="True" />
+				<Setter Property="Effect">
+					<Setter.Value>
+						<DropShadowEffect Color="#000000"
+						                  BlurRadius="16"
+						                  ShadowDepth="2"
+						                  Direction="270"
+						                  Opacity="0.4"
+						                  RenderingBias="Quality" />
+					</Setter.Value>
+				</Setter>
+			</Style>
+
+			<!-- Splitters: transparent at rest, visible on interaction -->
+			<Style x:Key="Kx.Splitter.Vertical" TargetType="GridSplitter" BasedOn="{StaticResource {x:Type GridSplitter}}">
+				<Setter Property="Width" Value="6" />
+				<Setter Property="HorizontalAlignment" Value="Center" />
+				<Setter Property="VerticalAlignment" Value="Stretch" />
+				<Setter Property="ShowsPreview" Value="False" />
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="Opacity" Value="0" />
+				<Setter Property="Cursor" Value="SizeWE" />
+				<Style.Triggers>
+					<Trigger Property="IsMouseOver" Value="True">
+						<Setter Property="Background" Value="{StaticResource Kx.Brush.Accent}" />
+						<Setter Property="Opacity" Value="0.6" />
+					</Trigger>
+					<Trigger Property="IsDragging" Value="True">
+						<Setter Property="Background" Value="{StaticResource Kx.Brush.Accent}" />
+						<Setter Property="Opacity" Value="0.8" />
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<Style x:Key="Kx.Splitter.Horizontal" TargetType="GridSplitter" BasedOn="{StaticResource {x:Type GridSplitter}}">
+				<Setter Property="Height" Value="6" />
+				<Setter Property="HorizontalAlignment" Value="Stretch" />
+				<Setter Property="VerticalAlignment" Value="Center" />
+				<Setter Property="ShowsPreview" Value="False" />
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="Opacity" Value="0" />
+				<Setter Property="Cursor" Value="SizeNS" />
+				<Style.Triggers>
+					<Trigger Property="IsMouseOver" Value="True">
+						<Setter Property="Background" Value="{StaticResource Kx.Brush.Accent}" />
+						<Setter Property="Opacity" Value="0.6" />
+					</Trigger>
+					<Trigger Property="IsDragging" Value="True">
+						<Setter Property="Background" Value="{StaticResource Kx.Brush.Accent}" />
+						<Setter Property="Opacity" Value="0.8" />
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<!-- DataGrid / TreeView defaults -->
+			<Style TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
+				<Setter Property="BorderThickness" Value="0" />
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="RowHeight" Value="36" />
+				<Setter Property="GridLinesVisibility" Value="None" />
+				<Setter Property="HeadersVisibility" Value="Column" />
+				<Setter Property="AlternatingRowBackground" Value="#00000000" />
+				<Setter Property="RowBackground" Value="Transparent" />
+				<Setter Property="CanUserResizeRows" Value="False" />
+				<Setter Property="SelectionMode" Value="Single" />
+				<Setter Property="SelectionUnit" Value="FullRow" />
+				<Setter Property="EnableRowVirtualization" Value="True" />
+				<Setter Property="EnableColumnVirtualization" Value="True" />
+			</Style>
+
+			<Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+				<Setter Property="Background" Value="{StaticResource MaterialDesign.Brush.Surface}" />
+				<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Secondary}" />
+				<Setter Property="FontWeight" Value="SemiBold" />
+				<Setter Property="FontSize" Value="12" />
+				<Setter Property="Height" Value="40" />
+				<Setter Property="Padding" Value="12,8" />
+				<Setter Property="BorderThickness" Value="0,0,0,1" />
+				<Setter Property="BorderBrush" Value="{StaticResource MaterialDesign.Brush.Separator}" />
+			</Style>
+
+			<Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="BorderThickness" Value="0" />
+				<Style.Triggers>
+					<Trigger Property="IsMouseOver" Value="True">
+						<Setter Property="Background">
+							<Setter.Value>
+								<SolidColorBrush Color="#0062ff" Opacity="0.08" />
+							</Setter.Value>
+						</Setter>
+					</Trigger>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background">
+							<Setter.Value>
+								<SolidColorBrush Color="#0062ff" Opacity="0.15" />
+							</Setter.Value>
+						</Setter>
+						<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Primary}" />
+					</Trigger>
+					<MultiTrigger>
+						<MultiTrigger.Conditions>
+							<Condition Property="IsSelected" Value="True" />
+							<Condition Property="IsMouseOver" Value="True" />
+						</MultiTrigger.Conditions>
+						<Setter Property="Background">
+							<Setter.Value>
+								<SolidColorBrush Color="#0062ff" Opacity="0.20" />
+							</Setter.Value>
+						</Setter>
+					</MultiTrigger>
+				</Style.Triggers>
+			</Style>
+
+			<Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
+				<Setter Property="BorderThickness" Value="0" />
+				<Setter Property="Padding" Value="12,8" />
+				<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+				<Style.Triggers>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background" Value="Transparent" />
+						<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Primary}" />
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<Style TargetType="TreeView" BasedOn="{StaticResource MaterialDesignTreeView}">
+				<Setter Property="BorderThickness" Value="0" />
+				<Setter Property="Background" Value="Transparent" />
+				<Setter Property="Padding" Value="8,4" />
+			</Style>
+
+			<Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
+				<Setter Property="Padding" Value="8,4" />
+				<Setter Property="MinHeight" Value="32" />
+				<Style.Triggers>
+					<Trigger Property="IsMouseOver" Value="True">
+						<Setter Property="Background">
+							<Setter.Value>
+								<SolidColorBrush Color="#0062ff" Opacity="0.08" />
+							</Setter.Value>
+						</Setter>
+					</Trigger>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background">
+							<Setter.Value>
+								<SolidColorBrush Color="#0062ff" Opacity="0.15" />
+							</Setter.Value>
+						</Setter>
+						<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Primary}" />
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<!-- Grid editor row action buttons -->
+			<Style x:Key="GridRowIconButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignToolButton}">
+				<Setter Property="Width" Value="32" />
+				<Setter Property="Height" Value="32" />
+				<Setter Property="Padding" Value="4" />
+				<Setter Property="Margin" Value="2" />
+				<Setter Property="VerticalAlignment" Value="Center" />
+				<Setter Property="HorizontalAlignment" Value="Center" />
+				<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Secondary}" />
+				<Style.Triggers>
+					<Trigger Property="IsMouseOver" Value="True">
+						<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Accent}" />
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<!-- Menu: make the legacy Menu look at home in Material dark -->
+			<Style TargetType="Menu">
+				<Setter Property="Background" Value="{StaticResource Kx.Brush.Surface}" />
+				<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Primary}" />
+				<Setter Property="Padding" Value="8,4" />
+			</Style>
+
+			<Style TargetType="MenuItem">
+				<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Primary}" />
+				<Setter Property="Padding" Value="10,6" />
+			</Style>
+
+			<!-- Modern ScrollBar: thin, discrete, visible on hover -->
+			<Style TargetType="ScrollBar" BasedOn="{StaticResource MaterialDesignScrollBar}">
+				<Setter Property="Background" Value="Transparent" />
+				<Style.Triggers>
+					<Trigger Property="Orientation" Value="Vertical">
+						<Setter Property="Width" Value="8" />
+						<Setter Property="MinWidth" Value="8" />
+					</Trigger>
+					<Trigger Property="Orientation" Value="Horizontal">
+						<Setter Property="Height" Value="8" />
+						<Setter Property="MinHeight" Value="8" />
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<!-- Modern TextBox with subtle focus effect -->
+			<Style TargetType="TextBox" BasedOn="{StaticResource MaterialDesignTextBox}">
+				<Setter Property="Padding" Value="8,6" />
+				<Setter Property="MinHeight" Value="32" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
+
+			<!-- Modern ComboBox -->
+			<Style TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignComboBox}">
+				<Setter Property="Padding" Value="8,6" />
+				<Setter Property="MinHeight" Value="32" />
+			</Style>
+
+			<!-- Tooltip styling for consistency -->
+			<Style TargetType="ToolTip" BasedOn="{StaticResource MaterialDesignToolTip}">
+				<Setter Property="Background" Value="{StaticResource MaterialDesign.Brush.Surface}" />
+				<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Primary}" />
+				<Setter Property="BorderBrush" Value="{StaticResource MaterialDesign.Brush.Separator}" />
+				<Setter Property="BorderThickness" Value="1" />
+				<Setter Property="Padding" Value="10,6" />
+				<Setter Property="HasDropShadow" Value="True" />
+			</Style>
+
+			<!-- Context Menu styling -->
+			<Style TargetType="ContextMenu" BasedOn="{StaticResource MaterialDesignContextMenu}">
+				<Setter Property="Background" Value="{StaticResource MaterialDesign.Brush.Surface}" />
+				<Setter Property="BorderBrush" Value="{StaticResource MaterialDesign.Brush.Separator}" />
+				<Setter Property="BorderThickness" Value="1" />
+				<Setter Property="Padding" Value="4" />
+				<Setter Property="HasDropShadow" Value="True" />
+			</Style>
+
+			<!-- Button base improvements -->
+			<Style TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+				<Setter Property="Padding" Value="16,8" />
+				<Setter Property="MinHeight" Value="36" />
+			</Style>
+		</ResourceDictionary>
+	</ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

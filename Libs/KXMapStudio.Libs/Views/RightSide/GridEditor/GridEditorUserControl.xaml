@@ -1,0 +1,257 @@
+<UserControl x:Class="KXMapStudio.Libs.Views.RightSide.GridEditor.GridEditorUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="300" d:DesignWidth="500">
+
+	<UserControl.InputBindings>
+		<KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveAsCommand}" />
+	</UserControl.InputBindings>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+
+		<!-- Document Info Header -->
+		<Border Grid.Row="0"
+		        Style="{StaticResource Kx.PanelHeader}"
+		        Visibility="{Binding IsLoaded, Converter={StaticResource BooleanToVisibilityConverter}}">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<!-- File Icon and Info -->
+				<materialDesign:PackIcon Grid.Column="0"
+				                         Width="20" Height="20"
+				                         VerticalAlignment="Center"
+				                         Margin="0,0,10,0">
+					<materialDesign:PackIcon.Style>
+						<Style TargetType="materialDesign:PackIcon">
+							<Setter Property="Kind" Value="FileDocumentOutline" />
+							<Setter Property="Foreground" Value="{StaticResource Kx.Brush.Text.Secondary}" />
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding FileExtension}" Value=".json">
+									<Setter Property="Kind" Value="CodeJson" />
+									<Setter Property="Foreground" Value="#4CAF50" />
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</materialDesign:PackIcon.Style>
+				</materialDesign:PackIcon>
+
+				<!-- File Details -->
+				<StackPanel Grid.Column="1" VerticalAlignment="Center">
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="{Binding OpenedFileName}"
+						           FontWeight="SemiBold"
+						           FontSize="13"
+						           VerticalAlignment="Center"
+						           TextTrimming="CharacterEllipsis" />
+
+						<!-- Dirty indicator -->
+						<materialDesign:PackIcon Kind="Circle"
+						                         Width="10" Height="10"
+						                         Foreground="{StaticResource Kx.Brush.Status.Warning}"
+						                         Margin="8,0,0,0"
+						                         VerticalAlignment="Center"
+						                         Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"
+						                         ToolTip="Unsaved changes" />
+					</StackPanel>
+
+					<!-- Load Time -->
+					<StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+						<materialDesign:PackIcon Kind="ClockOutline"
+						                         Width="12" Height="12"
+						                         VerticalAlignment="Center"
+						                         Foreground="{StaticResource Kx.Brush.Text.Secondary}"
+						                         Opacity="0.7" />
+						<TextBlock Text="{Binding OpenedFileLoadTime}"
+						           Margin="4,0,0,0"
+						           Foreground="{StaticResource Kx.Brush.Text.Secondary}"
+						           FontSize="11"
+						           VerticalAlignment="Center" />
+					</StackPanel>
+				</StackPanel>
+
+				<!-- Action Toolbar -->
+				<StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+					<Button Style="{StaticResource MaterialDesignToolForegroundButton}"
+					        ToolTip="Save (Ctrl+S)"
+					        Command="{Binding SaveCommand}"
+					        Width="32" Height="32"
+					        Padding="4"
+					        Margin="2,0">
+						<materialDesign:PackIcon Kind="ContentSave" Width="18" Height="18" />
+					</Button>
+					<Button Style="{StaticResource MaterialDesignToolForegroundButton}"
+					        ToolTip="Save As... (Ctrl+Shift+S)"
+					        Command="{Binding SaveAsCommand}"
+					        Width="32" Height="32"
+					        Padding="4"
+					        Margin="2,0">
+						<materialDesign:PackIcon Kind="ContentSaveEdit" Width="18" Height="18" />
+					</Button>
+					<Button Style="{StaticResource MaterialDesignToolForegroundButton}"
+					        ToolTip="Undo (Ctrl+Z)"
+					        Command="{Binding UndoCommand}"
+					        Width="32" Height="32"
+					        Padding="4"
+					        Margin="2,0">
+						<materialDesign:PackIcon Kind="Undo" Width="18" Height="18" />
+					</Button>
+					<Button Style="{StaticResource MaterialDesignToolForegroundButton}"
+					        ToolTip="Redo (Ctrl+Y)"
+					        Command="{Binding RedoCommand}"
+					        Width="32" Height="32"
+					        Padding="4"
+					        Margin="2,0">
+						<materialDesign:PackIcon Kind="Redo" Width="18" Height="18" />
+					</Button>
+					<Border Width="1" Height="20"
+					        Background="{StaticResource MaterialDesign.Brush.Separator}"
+					        Margin="6,0"
+					        Opacity="0.4" />
+					<Button Style="{StaticResource MaterialDesignToolForegroundButton}"
+					        ToolTip="Add Row"
+					        Command="{Binding AddRowCommand}"
+					        Width="32" Height="32"
+					        Padding="4"
+					        Margin="2,0">
+						<materialDesign:PackIcon Kind="Plus" Width="18" Height="18" />
+					</Button>
+					<Button Style="{StaticResource MaterialDesignToolForegroundButton}"
+					        ToolTip="Add Marker from Mumble (F9)"
+					        Command="{Binding AddMarkerFromMumbleCommand}"
+					        Width="32" Height="32"
+					        Padding="4"
+					        Margin="2,0">
+						<materialDesign:PackIcon Kind="MapMarkerPlus" Width="18" Height="18" />
+					</Button>
+					<Border Width="1" Height="20"
+					        Background="{StaticResource MaterialDesign.Brush.Separator}"
+					        Margin="6,0"
+					        Opacity="0.4" />
+					<Button Style="{StaticResource MaterialDesignToolForegroundButton}"
+					        ToolTip="Close File"
+					        Command="{Binding CloseFileCommand}"
+					        Width="32" Height="32"
+					        Padding="4"
+					        Margin="2,0">
+						<materialDesign:PackIcon Kind="Close" Width="18" Height="18" />
+					</Button>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<!-- Empty State -->
+		<Border Grid.Row="1" Grid.RowSpan="2"
+		        Padding="32"
+		        Visibility="{Binding IsLoaded, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+			<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+				<materialDesign:PackIcon Kind="FileDocumentOutline"
+				                         Width="80" Height="80"
+				                         HorizontalAlignment="Center"
+				                         Foreground="{StaticResource Kx.Brush.Text.Secondary}"
+				                         Opacity="0.2" />
+				<TextBlock Text="Select a file to begin editing"
+				           HorizontalAlignment="Center"
+				           Margin="0,20,0,0"
+				           Foreground="{StaticResource Kx.Brush.Text.Secondary}"
+				           FontSize="15"
+				           FontWeight="Medium"
+				           Opacity="0.7" />
+				<TextBlock Text="Choose a file from the Workshop Explorer"
+				           HorizontalAlignment="Center"
+				           Margin="0,8,0,0"
+				           Foreground="{StaticResource Kx.Brush.Text.Secondary}"
+				           FontSize="12"
+				           Opacity="0.5" />
+			</StackPanel>
+		</Border>
+
+		<!-- DataGrid -->
+		<DataGrid Grid.Row="2"
+		          x:Name="MarkersDataGrid"
+		          Margin="8"
+		          ItemsSource="{Binding Rows}"
+		          AutoGenerateColumns="False"
+		          CanUserAddRows="False"
+		          CanUserDeleteRows="False"
+		          IsReadOnly="False"
+		          FrozenColumnCount="1"
+		          PreviewKeyDown="MarkersDataGrid_PreviewKeyDown"
+		          Visibility="{Binding IsLoaded, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+			<!-- Context Menu for Row Operations -->
+			<DataGrid.ContextMenu>
+				<ContextMenu>
+					<MenuItem Header="Insert row above"
+					          Command="{Binding InsertRowAboveCommand}"
+					          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+						<MenuItem.Icon>
+							<materialDesign:PackIcon Kind="ArrowUpBold" Width="16" Height="16" />
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem Header="Insert row below"
+					          Command="{Binding InsertRowBelowCommand}"
+					          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+						<MenuItem.Icon>
+							<materialDesign:PackIcon Kind="ArrowDownBold" Width="16" Height="16" />
+						</MenuItem.Icon>
+					</MenuItem>
+				</ContextMenu>
+			</DataGrid.ContextMenu>
+
+			<DataGrid.Columns>
+				<!-- ID pinned left, not editable -->
+				<DataGridTextColumn Header="ID" Binding="{Binding Id}" IsReadOnly="True" Width="60" />
+
+				<!-- Name should expand the most -->
+				<DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"
+				                    MinWidth="180" />
+
+				<!-- Coordinates: order X, Y, Z -->
+				<DataGridTextColumn Header="X" Binding="{Binding X, StringFormat=F4, UpdateSourceTrigger=PropertyChanged}"
+				                    Width="110" />
+				<DataGridTextColumn Header="Y" Binding="{Binding Y, StringFormat=F4, UpdateSourceTrigger=PropertyChanged}"
+				                    Width="110" />
+				<DataGridTextColumn Header="Z" Binding="{Binding Z, StringFormat=F4, UpdateSourceTrigger=PropertyChanged}"
+				                    Width="110" />
+
+				<!-- Actions docked right (fixed width) -->
+				<DataGridTemplateColumn Header="Actions" Width="136">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+								<Button Style="{StaticResource GridRowIconButton}" Margin="0,0,6,0"
+								        Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+								        CommandParameter="{Binding}">
+									<materialDesign:PackIcon Kind="ChevronUp" Width="18" Height="18" />
+								</Button>
+								<Button Style="{StaticResource GridRowIconButton}"
+								        Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+								        CommandParameter="{Binding}">
+									<materialDesign:PackIcon Kind="ChevronDown" Width="18" Height="18" />
+								</Button>
+								<Button Style="{StaticResource GridRowIconButton}" Margin="6,0,0,0"
+								        Command="{Binding DataContext.DeleteRowCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+								        CommandParameter="{Binding}">
+									<materialDesign:PackIcon Kind="Delete" Width="18" Height="18" />
+								</Button>
+							</StackPanel>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+			</DataGrid.Columns>
+		</DataGrid>
+	</Grid>
+</UserControl>

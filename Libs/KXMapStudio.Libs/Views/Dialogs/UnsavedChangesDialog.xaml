@@ -1,0 +1,56 @@
+<Window x:Class="KXMapStudio.Libs.Views.Dialogs.UnsavedChangesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Style="{StaticResource MaterialDesignWindow}"
+        Title="Unsaved Changes"
+        WindowStartupLocation="CenterOwner"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        MinWidth="400">
+
+	<Grid Margin="24">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+
+		<!-- Warning icon and message -->
+		<StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+			<materialDesign:PackIcon Kind="AlertCircle"
+			                         Width="32" Height="32"
+			                         Foreground="{StaticResource Kx.Brush.Status.Warning}"
+			                         VerticalAlignment="Top"
+			                         Margin="0,0,12,0" />
+			<StackPanel VerticalAlignment="Center" MaxWidth="350">
+				<TextBlock Text="Unsaved Changes"
+				           FontSize="16"
+				           FontWeight="SemiBold"
+				           Margin="0,0,0,8" />
+				<TextBlock x:Name="MessageTextBlock"
+				           TextWrapping="Wrap"
+				           Opacity="0.87" />
+			</StackPanel>
+		</StackPanel>
+
+		<!-- Buttons -->
+		<StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+			<Button Content="CANCEL"
+			        Style="{StaticResource MaterialDesignFlatButton}"
+			        Click="CancelButton_Click"
+			        Margin="0,0,8,0"
+			        Padding="16,8" />
+			<Button Content="CONTINUE WITHOUT SAVING"
+			        Style="{StaticResource MaterialDesignFlatButton}"
+			        Click="ContinueWithoutSavingButton_Click"
+			        Margin="0,0,8,0"
+			        Padding="16,8" />
+			<Button Content="SAVE AND CONTINUE"
+			        Style="{StaticResource MaterialDesignRaisedButton}"
+			        Click="SaveAndContinueButton_Click"
+			        IsDefault="True"
+			        Padding="16,8" />
+		</StackPanel>
+	</Grid>
+</Window>

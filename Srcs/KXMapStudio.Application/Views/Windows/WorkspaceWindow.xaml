@@ -1,0 +1,69 @@
+<Window x:Class="KXMapStudio.Application.Views.Windows.WorkspaceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:leftSide="clr-namespace:KXMapStudio.Libs.Views.LeftSide;assembly=KXMapStudio.Libs"
+        xmlns:rightSide="clr-namespace:KXMapStudio.Libs.Views.RightSide;assembly=KXMapStudio.Libs"
+        xmlns:bottomSide="clr-namespace:KXMapStudio.Libs.Views.BottomSide.StatusBar;assembly=KXMapStudio.Libs"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Style="{StaticResource MaterialDesignWindow}"
+        Title="KX Map Studio" Height="800" Width="1280"
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource MaterialDesign.Brush.Background}"
+        FontFamily="{DynamicResource MaterialDesign.FontFamily}">
+
+	<Window.InputBindings>
+		<!-- Save Command: Ctrl+S -->
+		<KeyBinding Key="S" Modifiers="Control" Command="{Binding GridEditor.SaveCommand}" />
+		<!-- Save As Command: Ctrl+Shift+S -->
+		<KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding GridEditor.SaveAsCommand}" />
+		<!-- Undo Command: Ctrl+Z -->
+		<KeyBinding Key="Z" Modifiers="Control" Command="{Binding GridEditor.UndoCommand}" />
+		<!-- Redo Command: Ctrl+Y -->
+		<KeyBinding Key="Y" Modifiers="Control" Command="{Binding GridEditor.RedoCommand}" />
+	</Window.InputBindings>
+
+	<Window.Resources />
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+
+		<!-- Content area (separated from top) -->
+		<Grid Grid.Row="1" Margin="0">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="340" MinWidth="320" MaxWidth="520" />
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="*" MinWidth="400" />
+			</Grid.ColumnDefinitions>
+
+			<leftSide:LeftSidePanelUserControl
+				Grid.Column="0"
+				HorizontalAlignment="Stretch"
+				DataContext="{Binding LeftPanel}" />
+
+			<GridSplitter Grid.Column="1"
+			              Style="{StaticResource Kx.Splitter.Vertical}" />
+
+			<rightSide:RightSidePanelUserControl
+				Grid.Column="2"
+				DataContext="{Binding GridEditor}" />
+		</Grid>
+
+		<bottomSide:StatusBarUserControl Grid.Row="2" DataContext="{Binding StatusBar}" />
+
+		<!-- Snackbar for notifications (bottom-left) -->
+		<materialDesign:Snackbar
+			Grid.Row="1"
+			VerticalAlignment="Bottom"
+			HorizontalAlignment="Left"
+			Margin="16"
+			MessageQueue="{Binding SnackbarMessageQueue}" />
+	</Grid>
+</Window>
